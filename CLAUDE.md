@@ -60,28 +60,59 @@ Crispify is an Android utility that makes dense text easy to understand. It's a 
 ```
 app/
 ├── src/main/java/com/clickapps/crispify/
-│   ├── MainActivity.kt          # Entry point (currently template code)
-│   ├── di/                      # Dependency injection (empty, to be implemented)
-│   ├── engine/                  # LLM engine integration (empty, to be implemented)
-│   └── ui/theme/               # Material 3 theme configuration
+│   ├── MainActivity.kt          # Main entry point with first-launch detection
+│   ├── ProcessTextActivity.kt  # Handles ACTION_PROCESS_TEXT intent
+│   ├── data/                   # Data layer
+│   │   └── PreferencesManager.kt  # DataStore preferences management
+│   ├── diagnostics/            # Diagnostics system
+│   │   └── DiagnosticsManager.kt  # Privacy-preserving metrics collection
+│   ├── di/                     # Dependency injection (to be implemented)
+│   ├── engine/                 # LLM engine integration
+│   │   ├── LlamaEngine.kt      # Main engine with progress callbacks
+│   │   ├── LlamaNativeLibrary.kt # JNI wrapper interface
+│   │   └── MockModelInitializer.kt # Mock for development
+│   ├── ui/
+│   │   ├── onboarding/         # First launch experience
+│   │   │   ├── FirstLaunchScreen.kt
+│   │   │   ├── FirstLaunchViewModel.kt
+│   │   │   └── FirstLaunchRoute.kt
+│   │   ├── process/            # Text processing UI
+│   │   │   └── ProcessTextViewModel.kt
+│   │   └── theme/              # Material 3 theme configuration
 └── src/main/res/               # Resources (layouts, strings, drawables)
 ```
 
 ## Implementation Status
 
-The project is initialized from Android Studio's "Empty Activity" template. Per PRD Section 3 (v1.0 Release Plan), the following components must be implemented:
+### ✅ Completed Features (PR #2)
 
-1. **ProcessTextActivity**: Handle ACTION_PROCESS_TEXT intent (PRD §4 - Core Process Text Flow)
-2. **LLM Engine JNI Bridge**: Native interface to llama.cpp library (PRD §5)
-3. **Bottom Sheet UI**: Non-intrusive Compose interface for text simplification (PRD §3)
-4. **Model Loading**: Play Asset Delivery integration for GGUF model (PRD §5)
-5. **Onboarding Screen**: First launch experience with model preparation and diagnostics opt-in (PRD §4)
+1. **ProcessTextActivity**: Handles ACTION_PROCESS_TEXT intent with Material 3 bottom sheet
+2. **First Launch Screen**: Complete onboarding experience with model initialization and diagnostics opt-in
+3. **State Management**: ViewModel + DataStore Preferences for persistence
+4. **Diagnostics System**: Privacy-preserving local metrics collection (opt-in)
+5. **LLM Engine Stubs**: JNI wrapper interface ready for llama.cpp integration
+
+### 🚧 Pending Implementation
+
+1. **Native LLM Integration**: Actual llama.cpp library integration via JNI
+2. **Model Asset Delivery**: Google Play Asset Delivery for GGUF model
+3. **Token Streaming**: Real-time token-by-token output display
+4. **Production Testing**: Device testing across Android 12+ devices
+
+## Current Development State
+
+- **Active Branch**: `first-launch-screen` (PR #2)
+- **Main Branch**: `main`
+- **Last Feature**: First Launch Screen implementation (completed 2025-08-28)
+- **Mock Mode**: Currently using `MockLlamaNativeLibrary` for development
+- **Next Priority**: Native llama.cpp integration and model asset delivery
 
 ## Testing Strategy
 
 - Unit tests: JUnit in `src/test/`
 - Instrumented tests: AndroidJUnit in `src/androidTest/`
 - Test runner: `androidx.test.runner.AndroidJUnitRunner`
+- **Known Issues**: Some unit tests have mocking issues with DataStore (functionality works)
 
 ## Important Implementation Constraints (PRD Section 2 - Non-Goals)
 
@@ -133,15 +164,23 @@ The `.agent-os/` directory contains agent-related documentation and operational 
 ```
 .agent-os/
 ├── docs/                    # Workflow and process documentation
-│   └── github-workflow.md   # Feature branch workflow implementation
+│   ├── github-workflow.md   # Feature branch workflow implementation
+│   └── post-imp.md         # Post-implementation completion workflow
 ├── product/                 # Product management files
 │   └── roadmap.md          # Product roadmap and feature planning
+├── recaps/                  # Implementation recaps
+│   └── 2025-08-28-first-launch-screen.md  # First launch feature recap
+├── specs/                   # Feature specifications
+│   └── 2025-08-28-first-launch-screen/    # First launch spec and tasks
 ├── scripts/                 # Helper scripts for agents (to be created)
 └── agent-instructions.md    # Core agent behavioral guidelines (to be created)
 ```
 
 All agents should:
 - Check `.agent-os/` for relevant documentation before starting work
+- Follow the post-implementation workflow in `.agent-os/docs/post-imp.md`
 - Save agent-specific documentation and workflows in `.agent-os/docs/`
 - Reference `.agent-os/product/` for product planning and roadmap items
 - Use `.agent-os/scripts/` for any automation helper scripts
+- Create specs in `.agent-os/specs/` before major feature implementation
+- Document completed work in `.agent-os/recaps/`
