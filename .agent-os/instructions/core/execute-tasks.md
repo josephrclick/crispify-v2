@@ -29,18 +29,22 @@ Execute tasks for a given spec following three distinct phases:
 
 ### Step 1: Task Assignment
 
-Identify which tasks to execute from the spec (using spec_srd_reference file path and optional specific_tasks array), defaulting to the next uncompleted parent task if not specified.
+Identify which tasks to execute from the spec (using spec_srd_reference file path and optional specific_tasks array), defaulting to all uncompleted parent tasks if not specified.
 
 <task_selection>
   <explicit>user specifies exact task(s)</explicit>
-  <implicit>find next uncompleted task in tasks.md</implicit>
+  <implicit>find all uncompleted parent tasks in tasks.md</implicit>
 </task_selection>
 
 <instructions>
   ACTION: Identify task(s) to execute
-  DEFAULT: Select next uncompleted parent task if not specified
+  DEFAULT: Select all uncompleted parent tasks if not specified (user may restrict to a subset)
   CONFIRM: Task selection with user
 </instructions>
+
+<selection_summary>
+  PRINT: "Assigned parent tasks: [COUNT]; IDs: [LIST]"
+</selection_summary>
 
 </step>
 
@@ -98,6 +102,15 @@ Use the git-workflow subagent to manage git branches to ensure proper isolation 
 
 </step>
 
+<critical_validation>
+  STOP AND VERIFY:
+  - [ ] You have created or switched to a feature branch
+  - [ ] You are NOT on main branch
+  - [ ] Branch name follows convention (no date prefix)
+
+  If ANY above is false, STOP and fix before proceeding.
+</critical_validation>
+
 ## Phase 2: Task Execution Loop
 
 <step number="4" name="task_execution_loop">
@@ -121,6 +134,14 @@ Execute all assigned parent tasks and their subtasks using @.agent-os/instructio
 
   **IMPORTANT**: After loop completes, CONTINUE to Phase 3 (Step 5). Do not stop here.
 </execution_flow>
+
+<phase_transition>
+  MANDATORY NEXT ACTION:
+  - DO NOT stop here
+  - DO NOT ask user for permission
+  - IMMEDIATELY proceed to Step 5
+  - This is AUTOMATIC and REQUIRED
+</phase_transition>
 
 <loop_logic>
   <continue_conditions>

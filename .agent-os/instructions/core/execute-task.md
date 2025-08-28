@@ -95,6 +95,15 @@ Use the context-fetcher subagent to retrieve relevant sections from @.agent-os/s
   APPLY: Relevant patterns to implementation
 </instructions>
 
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>context-fetcher</subagent_type>
+    <prompt>copy the REQUEST block verbatim</prompt>
+    <description>Retrieve best practices</description>
+  </parameters>
+</implementation>
+
 </step>
 
 <step number="4" subagent="context-fetcher" name="code_style_review">
@@ -123,6 +132,15 @@ Use the context-fetcher subagent to retrieve relevant code style rules from @.ag
   PROCESS: Returned style rules
   APPLY: Relevant formatting and patterns
 </instructions>
+
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>context-fetcher</subagent_type>
+    <prompt>copy the REQUEST block verbatim</prompt>
+    <description>Retrieve code style rules</description>
+  </parameters>
+</implementation>
 
 </step>
 

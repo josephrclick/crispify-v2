@@ -184,3 +184,35 @@ All agents should:
 - Use `.agent-os/scripts/` for any automation helper scripts
 - Create specs in `.agent-os/specs/` before major feature implementation
 - Document completed work in `.agent-os/recaps/`
+
+## Agent OS Workflow
+
+### CRITICAL: Branch Management
+All development MUST happen on feature branches. The system will:
+1. Create/switch to a feature branch in Step 3 of `/execute-tasks`
+2. Name it from the spec folder without the date prefix (e.g., `2025-08-28-first-launch-screen` → `first-launch-screen`)
+3. Prevent direct commits to `main` via pre-commit hook
+
+### Understanding Subagents
+When Agent OS instructions mention `subagent="X"`, use the Task tool:
+- `subagent_type="X"`
+- Copy the REQUEST text as the prompt
+- See `.agent-os/docs/subagent-usage-guide.md` for examples
+
+### Workflow Phases
+`/execute-tasks` runs three mandatory phases:
+1. Setup (including branch creation)
+2. Task Execution (iterate through all selected parent tasks)
+3. Post-Execution (tests, commit, PR) — automatic, no permission needed
+
+### Common Commands
+```bash
+# Start new feature branch from a spec folder
+./.agent-os/scripts/start-feature.sh 2025-08-28-feature-name
+
+# Install git hooks
+./.agent-os/scripts/install-hooks.sh
+
+# Check current branch
+git branch --show-current
+```
