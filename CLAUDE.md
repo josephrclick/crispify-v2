@@ -125,3 +125,23 @@ Original Text:
 | Engine fails to generate | "An error occurred. Please try again." |
 | Device is out of memory | "Not enough memory to process this text." |
 | User cancels/dismisses | (UI simply dismisses, no message needed) |
+
+## Agent OS Directory Structure
+
+The `.agent-os/` directory contains agent-related documentation and operational files:
+
+```
+.agent-os/
+├── docs/                    # Workflow and process documentation
+│   └── github-workflow.md   # Feature branch workflow implementation
+├── product/                 # Product management files
+│   └── roadmap.md          # Product roadmap and feature planning
+├── scripts/                 # Helper scripts for agents (to be created)
+└── agent-instructions.md    # Core agent behavioral guidelines (to be created)
+```
+
+All agents should:
+- Check `.agent-os/` for relevant documentation before starting work
+- Save agent-specific documentation and workflows in `.agent-os/docs/`
+- Reference `.agent-os/product/` for product planning and roadmap items
+- Use `.agent-os/scripts/` for any automation helper scripts

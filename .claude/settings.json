@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit:*.kt|Write:*.kt|MultiEdit:*.kt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./gradlew compileDebugKotlin --daemon --console=plain 2>&1 | head -50",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Edit:*.java|Write:*.java|MultiEdit:*.java",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./gradlew compileDebugJavaWithJavac --daemon --console=plain 2>&1 | head -50",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Edit:*Test.kt|Write:*Test.kt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Test file modified. Run: ./gradlew testDebugUnitTest'",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit:*/res/*.xml|Write:*/res/*.xml",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./gradlew processDebugResources --daemon --console=plain 2>&1 | head -30",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Edit:*AndroidManifest.xml|Write:*AndroidManifest.xml",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/validate-manifest.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | jq -r '.command' | grep -q '^git commit'; then ./.claude/hooks/pre-commit-checks.sh; fi",
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "Edit:build.gradle*|Write:build.gradle*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '⚠️ Modifying build configuration. Remember: No network dependencies allowed per PRD.'",
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '🚀 Crispify Project - Remember to check PRD at _docs/PRD.md' && ./gradlew --stop && ./gradlew --daemon --console=plain",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
