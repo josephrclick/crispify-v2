@@ -12,6 +12,8 @@
 - [ ] Bottom sheet UI - Display simplified text in overlay `S`
 - [ ] LLM integration - Implement llama.cpp JNI wrapper `L`
 - [ ] Text leveling engine - Implement 7th-grade simplification prompt `M`
+- [ ] Text streaming - Display partial results as generated `M`
+- [ ] Copy functionality - Allow copying simplified text `XS`
 - [ ] Model delivery - Configure Play Asset Delivery for GGUF model `M`
 - [ ] Privacy validation - Verify no network permissions in manifest `XS`
 - [ ] Basic error handling - Graceful failures for edge cases `S`
@@ -30,8 +32,6 @@
 ### Features
 
 - [ ] Loading animations - Smooth transitions during processing `S`
-- [ ] Text streaming - Display partial results as generated `M`
-- [ ] Copy functionality - Allow copying simplified text `XS`
 - [ ] Model optimization - Fine-tune quantization for speed `L`
 - [ ] Memory management - Optimize for low-RAM devices `M`
 - [ ] Haptic feedback - Subtle feedback on interactions `XS`
