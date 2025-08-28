@@ -8,7 +8,7 @@ This document outlines a comprehensive workflow to ensure all development work h
 ### 1. Agent Instructions File (`.agent-os/agent-instructions.md`)
 Create a dedicated instructions file that all agents must read first containing:
 - Clear workflow requirements
-- Branch naming conventions (e.g., `feature/issue-{number}-{description}`)
+- Branch naming conventions derived from spec folder (remove date prefix). Example: `2025-08-28-first-launch-screen` → branch `first-launch-screen`
 - Mandatory steps before starting work
 - PR creation guidelines
 
@@ -41,22 +41,27 @@ Configure via GitHub repository settings:
 Create a helper script for starting new features:
 ```bash
 #!/bin/bash
-# Usage: ./start-feature.sh <issue-number> <description>
+# Usage: ./start-feature.sh <spec-folder>
 
-ISSUE_NUM=$1
-DESCRIPTION=$2
-BRANCH_NAME="feature/issue-${ISSUE_NUM}-${DESCRIPTION}"
+SPEC_FOLDER="$1"
+if [ -z "$SPEC_FOLDER" ]; then
+  echo "Usage: $0 <spec-folder>"
+  echo "Example: $0 2025-08-28-first-launch-screen"
+  exit 1
+fi
+
+FEATURE_NAME=$(echo "$SPEC_FOLDER" | sed 's/^[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}-//')
 
 git checkout main
 git pull origin main
-git checkout -b "$BRANCH_NAME"
-git push -u origin "$BRANCH_NAME"
+git checkout -b "$FEATURE_NAME"
+git push -u origin "$FEATURE_NAME"
 
-echo "Created and pushed branch: $BRANCH_NAME"
+echo "Created and pushed branch: $FEATURE_NAME"
 echo "Next steps:"
-echo "1. Make your changes"
-echo "2. Commit with: git commit -m 'feat: description (#${ISSUE_NUM})'"
-echo "3. Create PR with: gh pr create --title 'Feature: ${DESCRIPTION} (#${ISSUE_NUM})'"
+echo "1. Make your changes on branch: $FEATURE_NAME"
+echo "2. Commit with a descriptive message (include spec reference if applicable)"
+echo "3. Create PR with: gh pr create --base main --title 'Feature: ${FEATURE_NAME}' --body 'Implements ${FEATURE_NAME} (spec: .agent-os/specs/${SPEC_FOLDER}/)'"
 ```
 
 ### 5. Update CLAUDE.md

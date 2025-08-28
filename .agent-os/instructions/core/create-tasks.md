@@ -58,6 +58,15 @@ Use the file-creator subagent to create file: tasks.md inside of the current fea
     - [ ] 2.2 [IMPLEMENTATION_STEP]
 </task_template>
 
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>file-creator</subagent_type>
+    <prompt>copy the creation request and templates verbatim</prompt>
+    <description>Create tasks.md from template in spec folder</description>
+  </parameters>
+</implementation>
+
 <ordering_principles>
   - Consider technical dependencies
   - Follow TDD approach

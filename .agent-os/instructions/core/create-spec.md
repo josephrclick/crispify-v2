@@ -44,6 +44,15 @@ Use the context-fetcher subagent to identify spec initiation method by either fi
 
 </step>
 
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>context-fetcher</subagent_type>
+    <prompt>copy the identification requests verbatim</prompt>
+    <description>Retrieve initiation context</description>
+  </parameters>
+</implementation>
+
 <step number="2" subagent="context-fetcher" name="context_gathering">
 
 ### Step 2: Context Gathering (Conditional)
@@ -67,6 +76,15 @@ Use the context-fetcher subagent to read @.agent-os/product/mission-lite.md and 
 </context_analysis>
 
 </step>
+
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>context-fetcher</subagent_type>
+    <prompt>copy the REQUESTs for mission-lite.md and tech-stack.md verbatim</prompt>
+    <description>Retrieve minimal context docs</description>
+  </parameters>
+</implementation>
 
 <step number="3" subagent="context-fetcher" name="requirements_clarification">
 
@@ -96,6 +114,15 @@ Use the context-fetcher subagent to clarify scope boundaries and technical consi
 
 </step>
 
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>context-fetcher</subagent_type>
+    <prompt>copy the clarification prompts verbatim</prompt>
+    <description>Clarify requirements</description>
+  </parameters>
+</implementation>
+
 <step number="4" subagent="date-checker" name="date_determination">
 
 ### Step 4: Date Determination
@@ -107,6 +134,15 @@ Use the date-checker subagent to determine the current date in YYYY-MM-DD format
 </subagent_output>
 
 </step>
+
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>date-checker</subagent_type>
+    <prompt>Provide today's date in YYYY-MM-DD format</prompt>
+    <description>Determine date for naming</description>
+  </parameters>
+</implementation>
 
 <step number="5" subagent="file-creator" name="spec_folder_creation">
 
@@ -133,6 +169,15 @@ Use kebab-case for spec name. Maximum 5 words in name.
 </example_names>
 
 </step>
+
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>file-creator</subagent_type>
+    <prompt>Create the spec folder as described</prompt>
+    <description>Create spec folder</description>
+  </parameters>
+</implementation>
 
 <step number="6" subagent="file-creator" name="create_spec_md">
 
@@ -227,6 +272,15 @@ Use the file-creator subagent to create the file: .agent-os/specs/YYYY-MM-DD-spe
 
 </step>
 
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>file-creator</subagent_type>
+    <prompt>Create spec.md with the provided template</prompt>
+    <description>Create spec.md</description>
+  </parameters>
+</implementation>
+
 <step number="7" subagent="file-creator" name="create_spec_lite_md">
 
 ### Step 7: Create spec-lite.md
@@ -256,6 +310,15 @@ Use the file-creator subagent to create the file: .agent-os/specs/YYYY-MM-DD-spe
 </example>
 
 </step>
+
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>file-creator</subagent_type>
+    <prompt>Create spec-lite.md with the provided template</prompt>
+    <description>Create spec-lite.md</description>
+  </parameters>
+</implementation>
 
 <step number="8" subagent="file-creator" name="create_technical_spec">
 
@@ -308,6 +371,15 @@ Use the file-creator subagent to create the file: sub-specs/technical-spec.md us
 
 </step>
 
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>file-creator</subagent_type>
+    <prompt>Create sub-specs/technical-spec.md with the provided template</prompt>
+    <description>Create technical-spec.md</description>
+  </parameters>
+</implementation>
+
 <step number="9" subagent="file-creator" name="create_database_schema">
 
 ### Step 9: Create Database Schema (Conditional)
@@ -349,6 +421,15 @@ Use the file-creator subagent to create the file: sub-specs/database-schema.md O
 </schema_sections>
 
 </step>
+
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>file-creator</subagent_type>
+    <prompt>Create database-schema.md only if needed using the template</prompt>
+    <description>Create database-schema.md (conditional)</description>
+  </parameters>
+</implementation>
 
 <step number="10" subagent="file-creator" name="create_api_spec">
 
@@ -401,6 +482,15 @@ Use the file-creator subagent to create file: sub-specs/api-spec.md ONLY IF API 
 </endpoint_template>
 
 </step>
+
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>file-creator</subagent_type>
+    <prompt>Create api-spec.md only if needed using the template</prompt>
+    <description>Create api-spec.md (conditional)</description>
+  </parameters>
+</implementation>
 
 <step number="11" name="user_review">
 
