@@ -34,16 +34,23 @@ When instructions contain `subagent="X"`:
 - Never skip subagent steps
 - See `.agent-os/docs/subagent-usage-guide.md` for examples
 
+## Commit Frequency
+
+**IMPORTANT**: Commits are now made after EACH parent task completion:
+- Each parent task gets its own commit (Step 8 of execute-task.md)
+- Commit message format: `feat: [parent task description]`
+- Include task number and spec reference in commit body
+- This ensures incremental progress is saved
+
 ## Post-Execution Requirements
 
 After all tasks complete, you MUST:
 1. Run full test suite
-2. Create git commit
-3. Push to GitHub
-4. Create pull request
-5. Update tasks.md with [x] markers
-6. Create recap document
-7. Play completion sound
+2. Push to GitHub (commits already made)
+3. Create pull request
+4. Update tasks.md with [x] markers
+5. Create recap document
+6. Play completion sound
 
 ## Common Mistakes to Avoid
 

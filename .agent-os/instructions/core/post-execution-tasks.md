@@ -51,33 +51,33 @@ Use the test-runner subagent to run the ALL tests in the application's test suit
 
 ### Step 2: Git Workflow
 
-Use the git-workflow subagent to create git commit, push to GitHub, and create pull request for the implemented features.
+Use the git-workflow subagent to push to GitHub and create pull request (commits were already made after each parent task).
 
 <instructions>
   ACTION: Use git-workflow subagent
-  REQUEST: "Complete git workflow for [SPEC_NAME] feature:
+  REQUEST: "Push and create PR for [SPEC_NAME] feature:
             - Spec: [SPEC_FOLDER_PATH]
-            - Changes: All modified files
             - PR Target (base): main branch
-            - Description: [SUMMARY_OF_IMPLEMENTED_FEATURES]"
+            - Description: [SUMMARY_OF_IMPLEMENTED_FEATURES]
+            - Note: Commits already made after each parent task"
   WAIT: For workflow completion
   PROCESS: Save PR URL for summary
 </instructions>
 
-<commit_process>
-  <commit>
-    <message>descriptive summary of changes</message>
-    <format>conventional commits if applicable</format>
-  </commit>
+<git_process>
+  <commits>
+    <status>Already created after each parent task</status>
+    <format>One commit per parent task</format>
+  </commits>
   <push>
     <target>feature branch (derived from spec folder, no date prefix)</target>
     <remote>origin</remote>
   </push>
   <pull_request>
     <title>descriptive PR title</title>
-    <description>functionality recap</description>
+    <description>functionality recap with list of commits</description>
   </pull_request>
-</commit_process>
+</git_process>
 
 </step>
 

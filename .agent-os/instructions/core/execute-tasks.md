@@ -130,9 +130,11 @@ Execute all assigned parent tasks and their subtasks using @.agent-os/instructio
       - all associated subtasks
     WAIT for task completion
     UPDATE tasks.md status
+    COMMIT progress (Step 8 of execute-task.md will handle this)
   END FOR
 
   **IMPORTANT**: After loop completes, CONTINUE to Phase 3 (Step 5). Do not stop here.
+  **NOTE**: Each parent task will be committed individually per Step 8 of execute-task.md
 </execution_flow>
 
 <phase_transition>

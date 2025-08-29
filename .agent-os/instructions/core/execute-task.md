@@ -274,6 +274,53 @@ IMPORTANT: In the tasks.md file, mark this task and its sub-tasks complete by up
 
 </step>
 
+<step number="8" subagent="git-workflow" name="commit_task_progress">
+
+### Step 8: Commit Task Progress
+
+Use the git-workflow subagent to create a commit for this completed parent task, ensuring progress is saved incrementally.
+
+<commit_guidelines>
+  <message_format>
+    feat: [parent task description]
+    
+    - [Brief summary of what was implemented]
+    - [Key changes or additions]
+    
+    Task: [parent task number] from [spec folder name]
+  </message_format>
+  
+  <commit_scope>
+    - All files modified for this parent task
+    - Updated tasks.md with completion status
+    - New tests and implementation files
+  </commit_scope>
+</commit_guidelines>
+
+<instructions>
+  ACTION: Use git-workflow subagent
+  REQUEST: "Create commit for completed parent task:
+            - Task: Parent task [NUMBER] - [DESCRIPTION]
+            - Spec: [SPEC_FOLDER_PATH]
+            - Changes: All files modified for this task
+            - Commit message: feat: [task description]
+            
+            Only commit, do not push or create PR yet."
+  WAIT: For commit completion
+  CONFIRM: Changes are committed locally
+</instructions>
+
+<implementation>
+  <tool>Task</tool>
+  <parameters>
+    <subagent_type>git-workflow</subagent_type>
+    <prompt>copy the REQUEST block verbatim</prompt>
+    <description>Commit parent task progress</description>
+  </parameters>
+</implementation>
+
+</step>
+
 </process_flow>
 
 <post_flight_check>

@@ -2,13 +2,21 @@
 
 echo "🔍 Running pre-commit checks for Crispify..."
 
+# Check for OWNER_ONLY environment variable
+OWNER_ONLY=${OWNER_ONLY:-false}
+
 # Check current branch
 CURRENT_BRANCH=$(git branch --show-current)
 if [ "$CURRENT_BRANCH" = "main" ]; then
-    echo "❌ ERROR: Direct commits to main branch are not allowed!"
-    echo "   Please create a feature branch first:"
-    echo "   git checkout -b feature/your-feature-name"
-    exit 1
+    if [ "$OWNER_ONLY" = "true" ]; then
+        echo "⚠️  WARNING: Direct commit to main branch (OWNER_ONLY flag detected)"
+    else
+        echo "❌ ERROR: Direct commits to main branch are not allowed!"
+        echo "   Please create a feature branch first:"
+        echo "   git checkout -b feature/your-feature-name"
+        echo "   (Use 'OWNER_ONLY=true git commit' to bypass this check)"
+        exit 1
+    fi
 fi
 
 echo "✅ Branch check passed (on $CURRENT_BRANCH)"
