@@ -52,12 +52,23 @@ Java_com_clickapps_crispify_engine_LlamaNativeLibraryImpl_loadModel(
     auto progress_fn = [env, progress_callback](float progress) {
         if (!progress_callback) return;
         
-        // Get callback method
+        // Kotlin Function1<Float, Unit> needs to be called with boxed Float
         jclass callback_class = env->GetObjectClass(progress_callback);
-        jmethodID invoke_method = env->GetMethodID(callback_class, "invoke", "(F)V");
+        jmethodID invoke_method = env->GetMethodID(callback_class, "invoke", "(Ljava/lang/Object;)Ljava/lang/Object;");
         
         if (invoke_method) {
-            env->CallVoidMethod(progress_callback, invoke_method, progress);
+            // Box the float as Float object
+            jclass float_class = env->FindClass("java/lang/Float");
+            jmethodID float_constructor = env->GetMethodID(float_class, "<init>", "(F)V");
+            jobject float_obj = env->NewObject(float_class, float_constructor, progress);
+            
+            // Call the Kotlin lambda
+            jobject result = env->CallObjectMethod(progress_callback, invoke_method, float_obj);
+            
+            // Clean up
+            env->DeleteLocalRef(float_obj);
+            env->DeleteLocalRef(float_class);
+            if (result) env->DeleteLocalRef(result);
         }
         
         env->DeleteLocalRef(callback_class);
