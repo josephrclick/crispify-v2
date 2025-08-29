@@ -37,7 +37,7 @@ class ProcessTextViewModelConcurrencyTest {
         val preferencesManager = PreferencesManager(context)
         val diagnosticsManager = DiagnosticsManager(preferencesManager.dataStore)
         return ProcessTextViewModel(
-            llamaEngine = LlamaEngine(context, native),
+            llamaEngine = engine,
             tokenCounter = FakeTokenCounterAlways(10), // within limit
             levelingTemplate = "### Simplified Text\n\nOriginal Text:\n{{INPUT}}",
             preferencesManager = preferencesManager,
