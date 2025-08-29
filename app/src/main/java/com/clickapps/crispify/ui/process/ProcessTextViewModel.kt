@@ -50,25 +50,25 @@ class ProcessTextViewModel(
             var tokenCount = 0
             
             try {
-                // Check if model is initialized
-                if (!llamaEngine.isInitialized()) {
-                    // Initialize model if needed
-                    llamaEngine.initialize { progress ->
-                        // Progress updates could be shown if needed
-                    }.collect()
-                }
-                
-                // Check token length limit (~1200 tokens per PRD)
+                // Quick pre-flight token limit check (per PRD)
                 val tokens = tokenCounter.count(inputText)
                 if (tokens > TokenCounter.LIMIT_TOKENS) {
-                    diagnosticsManager?.recordError(ErrorCode.TEXT_TOO_LONG)
                     _uiState.update {
                         it.copy(
                             isProcessing = false,
                             error = "Please select a smaller amount of text for this version."
                         )
                     }
+                    // Record after updating UI to avoid blocking error surface
+                    diagnosticsManager?.recordError(ErrorCode.TEXT_TOO_LONG)
                     return@launch
+                }
+
+                // Ensure model is initialized only after passing token check
+                if (!llamaEngine.isInitialized()) {
+                    llamaEngine.initialize { _ ->
+                        // Progress updates could be shown if needed
+                    }.collect()
                 }
                 
                 // Build prompt via helper and process the text with real streaming

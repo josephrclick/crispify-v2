@@ -75,7 +75,8 @@ fun FirstLaunchScreen(
                 text = "Crispify",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.testTag("AppName")
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -195,7 +196,8 @@ fun FirstLaunchScreen(
                 enabled = !isModelLoading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(56.dp)
+                    .testTag("GetStartedButton"),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant

@@ -7,8 +7,11 @@ import com.clickapps.crispify.engine.LlamaEngine
 import com.clickapps.crispify.engine.LlamaNativeLibrary
 import com.clickapps.crispify.engine.TokenCallback
 import com.clickapps.crispify.engine.TokenCounter
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
+import com.clickapps.crispify.testing.TestPreferencesManager
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
+import org.junit.Rule
+import com.clickapps.crispify.testing.MainDispatcherRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -39,12 +42,17 @@ private class CountingMockNativeLibrary : LlamaNativeLibrary {
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
+@OptIn(ExperimentalCoroutinesApi::class)
 class ProcessTextViewModelBoundaryTest {
+
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
 
     private fun vm(tokens: Int, native: LlamaNativeLibrary = CountingMockNativeLibrary()): Triple<ProcessTextViewModel, DiagnosticsManager, CountingMockNativeLibrary> {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val preferencesManager = PreferencesManager(context)
-        val diagnosticsManager = DiagnosticsManager(preferencesManager.dataStore)
+        val testPrefs = TestPreferencesManager()
+        val diagnosticsManager = DiagnosticsManager(testPrefs.dataStore)
         val nativeLib = native as CountingMockNativeLibrary
         val viewModel = ProcessTextViewModel(
             llamaEngine = LlamaEngine(nativeLib),
@@ -57,28 +65,28 @@ class ProcessTextViewModelBoundaryTest {
     }
 
     @Test
-    fun withinLimit_1190_tokens_allowed() = runBlocking {
+    fun withinLimit_1190_tokens_allowed() = runTest {
         val (vm, _, _) = vm(1190)
         vm.processText("abc")
-        delay(50)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
         // Should not set error
         assertEquals(null, vm.uiState.value.error)
     }
 
     @Test
-    fun boundary_1200_tokens_allowed() = runBlocking {
+    fun boundary_1200_tokens_allowed() = runTest {
         val (vm, _, _) = vm(TokenCounter.LIMIT_TOKENS)
         vm.processText("abc")
-        delay(50)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
         assertEquals(null, vm.uiState.value.error)
     }
 
     @Test
-    fun overLimit_1201_blocks_and_no_engine_call() = runBlocking {
+    fun overLimit_1201_blocks_and_no_engine_call() = runTest {
         val native = CountingMockNativeLibrary()
         val (vm, _, lib) = vm(TokenCounter.LIMIT_TOKENS + 1, native)
         vm.processText("abc")
-        delay(500)
+        mainDispatcherRule.dispatcher.scheduler.advanceUntilIdle()
         assertEquals("Please select a smaller amount of text for this version.", vm.uiState.value.error)
         assertTrue(!lib.processCalled)
     }
