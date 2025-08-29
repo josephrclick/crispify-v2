@@ -7,7 +7,7 @@
 
 ### Features
 
-- [ ] First Launch screen - Onboarding and initial model load `S`
+- [X] First Launch screen - Onboarding and initial model load `S`
 - [ ] Process-Text intent handler - Receive text from Android selection toolbar `M`
 - [ ] Bottom sheet UI - Display simplified text in overlay `S`
 - [ ] LLM integration - Implement llama.cpp JNI wrapper `L`
