@@ -18,11 +18,47 @@ static std::atomic<bool> g_cancel_flag{false};
 // Model wrapper instance
 static std::unique_ptr<LlamaWrapper> g_model_wrapper;
 
+// Cached JNI references for performance
+static jclass g_float_class = nullptr;
+static jmethodID g_float_constructor = nullptr;
+
 // JNI OnLoad - called when library is loaded
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* /*reserved*/) {
     g_vm = vm;
+    
+    // Cache Float class and constructor for performance
+    JNIEnv* env;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK) {
+        jclass local_float_class = env->FindClass("java/lang/Float");
+        if (local_float_class) {
+            g_float_class = (jclass)env->NewGlobalRef(local_float_class);
+            if (g_float_class) {
+                g_float_constructor = env->GetMethodID(g_float_class, "<init>", "(F)V");
+                if (!g_float_constructor) {
+                    // Clean up on failure
+                    env->DeleteGlobalRef(g_float_class);
+                    g_float_class = nullptr;
+                }
+            }
+            env->DeleteLocalRef(local_float_class);
+        }
+    }
+    
     LOGD("JNI_OnLoad: crispify_llama library loaded");
     return JNI_VERSION_1_6;
+}
+
+// JNI OnUnload - called when library is unloaded
+JNIEXPORT void JNI_OnUnload(JavaVM* vm, void* /*reserved*/) {
+    JNIEnv* env;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK) {
+        // Clean up global references
+        if (g_float_class) {
+            env->DeleteGlobalRef(g_float_class);
+            g_float_class = nullptr;
+        }
+    }
+    LOGD("JNI_OnUnload: crispify_llama library unloaded");
 }
 
 extern "C" {
@@ -52,12 +88,36 @@ Java_com_clickapps_crispify_engine_LlamaNativeLibraryImpl_loadModel(
     auto progress_fn = [env, progress_callback](float progress) {
         if (!progress_callback) return;
         
-        // Get callback method
+        // Check for cached references
+        if (!g_float_class || !g_float_constructor) {
+            LOGD("Float class not cached, skipping callback");
+            return;
+        }
+        
+        // Kotlin Function1<Float, Unit> needs to be called with boxed Float
         jclass callback_class = env->GetObjectClass(progress_callback);
-        jmethodID invoke_method = env->GetMethodID(callback_class, "invoke", "(F)V");
+        if (!callback_class) return;
+        
+        jmethodID invoke_method = env->GetMethodID(callback_class, "invoke", "(Ljava/lang/Object;)Ljava/lang/Object;");
         
         if (invoke_method) {
-            env->CallVoidMethod(progress_callback, invoke_method, progress);
+            // Box the float as Float object using cached references
+            jobject float_obj = env->NewObject(g_float_class, g_float_constructor, progress);
+            
+            if (float_obj) {
+                // Call the Kotlin lambda
+                jobject result = env->CallObjectMethod(progress_callback, invoke_method, float_obj);
+                
+                // Clean up
+                env->DeleteLocalRef(float_obj);
+                if (result) env->DeleteLocalRef(result);
+            }
+            
+            // Check for exceptions
+            if (env->ExceptionCheck()) {
+                env->ExceptionDescribe();
+                env->ExceptionClear();
+            }
         }
         
         env->DeleteLocalRef(callback_class);
