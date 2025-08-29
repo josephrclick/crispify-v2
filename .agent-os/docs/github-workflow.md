@@ -86,6 +86,19 @@ Before starting work:
 See `.agent-os/docs/github-workflow.md` for complete workflow documentation.
 ```
 
+### 6. PR Description Template (Required)
+
+- This repository provides a default PR description template at `.github/pull_request_template.md`.
+- Always use the template and fill in all sections (Summary, Changes, Testing, Benefits, Notes).
+- Include the spec folder reference (e.g., `.agent-os/specs/YYYY-MM-DD-feature-name/`) and screenshots/GIFs for any UI changes.
+- When using GitHub CLI, prefer filling the template automatically:
+
+```bash
+gh pr create --base main --title "<descriptive title>" --fill
+```
+
+> Note: Avoid passing `--body` which bypasses the repository template. The `--fill` flag uses the default template so descriptions are consistent.
+
 ### 6. GitHub Issue Templates
 Create `.github/ISSUE_TEMPLATE/feature-request.md`:
 ```markdown

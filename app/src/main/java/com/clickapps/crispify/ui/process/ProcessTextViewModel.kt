@@ -8,8 +8,13 @@ import com.clickapps.crispify.diagnostics.DiagnosticsManager
 import com.clickapps.crispify.diagnostics.ErrorCode
 import com.clickapps.crispify.diagnostics.MetricType
 import com.clickapps.crispify.engine.LlamaEngine
+import com.clickapps.crispify.engine.TokenCounter
+import com.clickapps.crispify.engine.prompt.PromptTemplates
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 /**
  * ViewModel for ProcessTextActivity
@@ -17,6 +22,8 @@ import kotlinx.coroutines.launch
  */
 class ProcessTextViewModel(
     private val llamaEngine: LlamaEngine,
+    private val tokenCounter: TokenCounter,
+    private val levelingTemplate: String,
     private val preferencesManager: PreferencesManager,
     private val diagnosticsManager: DiagnosticsManager? = null
 ) : ViewModel() {
@@ -24,11 +31,15 @@ class ProcessTextViewModel(
     private val _uiState = MutableStateFlow(ProcessTextUiState())
     val uiState: StateFlow<ProcessTextUiState> = _uiState.asStateFlow()
     
+    private var currentJob: Job? = null
+
     /**
-     * Process the selected text through the LLM engine
+     * Process the selected text through the LLM engine.
+     * Implements minimal pseudo-streaming by appending tokens after engine completes.
      */
     fun processText(inputText: String) {
-        viewModelScope.launch {
+        currentJob?.cancel()
+        currentJob = viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true, error = null) }
             
             // Track processing start time for metrics
@@ -44,8 +55,9 @@ class ProcessTextViewModel(
                     }.collect()
                 }
                 
-                // Check text length limit (~1200 tokens, roughly 4800 characters)
-                if (inputText.length > 4800) {
+                // Check token length limit (~1200 tokens per PRD)
+                val tokens = tokenCounter.count(inputText)
+                if (tokens > TokenCounter.LIMIT_TOKENS) {
                     diagnosticsManager?.recordError(ErrorCode.TEXT_TOO_LONG)
                     _uiState.update {
                         it.copy(
@@ -56,28 +68,36 @@ class ProcessTextViewModel(
                     return@launch
                 }
                 
-                // Process the text
+                // Build prompt via helper and process the text
+                val prompt = PromptTemplates.buildFromTemplate(levelingTemplate, inputText)
+                val simplifiedText = llamaEngine.processText(prompt)
+                // Time to first token approximates engine compute completion for pseudo-streaming
                 timeToFirstToken = System.currentTimeMillis() - startTime
-                val simplifiedText = llamaEngine.processText(formatPrompt(inputText))
                 
                 // Extract the result (remove the "### End" marker if present)
                 val cleanedText = simplifiedText
                     .substringBefore("### End")
                     .trim()
                 
-                _uiState.update {
-                    it.copy(
-                        isProcessing = false,
-                        processedText = cleanedText,
-                        error = null
-                    )
+                // Pseudo-streaming: append tokens with small delays
+                val tokensOut = cleanedText.split(Regex("\\s+")).filter { it.isNotEmpty() }
+                val builder = StringBuilder()
+                for (token in tokensOut) {
+                    if (!isActive) return@launch
+                    if (builder.isNotEmpty()) builder.append(' ')
+                    builder.append(token)
+                    _uiState.update { it.copy(processedText = builder.toString(), isProcessing = true, error = null) }
+                    delay(STREAM_DELAY_MS)
                 }
+                // Finalize state after streaming completes
+                _uiState.update { it.copy(isProcessing = false, error = null) }
                 
                 // Track diagnostics if enabled
-                val processingTime = System.currentTimeMillis() - startTime
+                val engineProcessingTimeMs = timeToFirstToken
                 val memoryUsedMB = llamaEngine.getMemoryUsage() / (1024 * 1024)
-                val tokensPerSecond = if (processingTime > 0) {
-                    (cleanedText.split(" ").size * 1000.0) / processingTime
+                val outTokenCount = tokenCounter.count(cleanedText).toDouble()
+                val tokensPerSecond = if (engineProcessingTimeMs > 0) {
+                    (outTokenCount * 1000.0) / engineProcessingTimeMs
                 } else 0.0
                 
                 diagnosticsManager?.recordProcessingSession(
@@ -107,22 +127,10 @@ class ProcessTextViewModel(
             }
         }
     }
-    
-    /**
-     * Format the input text with the leveling prompt template
-     * Based on PRD Appendix A
-     */
-    private fun formatPrompt(inputText: String): String {
-        return """
-            ### Simplified Text
-            
-            Rewrite the following text in clear, plain language suitable for a 7th-grade reading level. Preserve all key facts, names, and numbers. Use shorter sentences and simple words. Do not add any new information or opinions.
-            
-            Original Text:
-            $inputText
-        """.trimIndent()
-    }
+
 }
+
+private const val STREAM_DELAY_MS = 5L
 
 /**
  * UI state for ProcessTextActivity
@@ -138,6 +146,8 @@ data class ProcessTextUiState(
  */
 class ProcessTextViewModelFactory(
     private val llamaEngine: LlamaEngine,
+    private val tokenCounter: TokenCounter,
+    private val levelingTemplate: String,
     private val preferencesManager: PreferencesManager,
     private val diagnosticsManager: DiagnosticsManager? = null
 ) : ViewModelProvider.Factory {
@@ -145,7 +155,13 @@ class ProcessTextViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ProcessTextViewModel::class.java)) {
-            return ProcessTextViewModel(llamaEngine, preferencesManager, diagnosticsManager) as T
+            return ProcessTextViewModel(
+                llamaEngine,
+                tokenCounter,
+                levelingTemplate,
+                preferencesManager,
+                diagnosticsManager
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
