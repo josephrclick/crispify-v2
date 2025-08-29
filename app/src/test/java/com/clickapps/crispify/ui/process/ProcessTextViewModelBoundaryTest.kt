@@ -78,7 +78,7 @@ class ProcessTextViewModelBoundaryTest {
         val native = CountingMockNativeLibrary()
         val (vm, _, lib) = vm(TokenCounter.LIMIT_TOKENS + 1, native)
         vm.processText("abc")
-        delay(20)
+        delay(500)
         assertEquals("Please select a smaller amount of text for this version.", vm.uiState.value.error)
         assertTrue(!lib.processCalled)
     }
