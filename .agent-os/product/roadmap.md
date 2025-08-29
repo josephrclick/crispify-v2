@@ -10,6 +10,7 @@
 - [X] First Launch screen - Onboarding and initial model load `S`
 - [X] Process-Text intent handler - Receive text from Android selection toolbar `M`
 - [X] Bottom sheet UI - Display simplified text in overlay `S` [COMPLETED 2025-08-29]
+- [ ] Test infrastructure fixes - Resolve coroutine timing and mock configuration issues `M`
 - [ ] LLM integration - Implement llama.cpp JNI wrapper `L`
 - [ ] Text leveling engine - Implement 7th-grade simplification prompt `M`
 - [ ] Text streaming - Display partial results as generated `M`
