@@ -30,6 +30,7 @@ class FirstLaunchScreenTest {
                 onDismiss = {}
             )
         }
+        composeTestRule.waitForIdle()
 
         // Then - verify all expected UI components are present
         composeTestRule.onNodeWithTag("BrandingPlaceholder").assertExists()
@@ -52,9 +53,10 @@ class FirstLaunchScreenTest {
                 onDismiss = {}
             )
         }
+        composeTestRule.waitForIdle()
 
         // Then
-        composeTestRule.onNodeWithText("Get Started")
+        composeTestRule.onNodeWithTag("GetStartedButton")
             .assertExists()
             .assertIsNotEnabled()
     }
@@ -71,9 +73,10 @@ class FirstLaunchScreenTest {
                 onDismiss = {}
             )
         }
+        composeTestRule.waitForIdle()
 
         // Then
-        composeTestRule.onNodeWithText("Get Started")
+        composeTestRule.onNodeWithTag("GetStartedButton")
             .assertExists()
             .assertIsEnabled()
     }
@@ -91,6 +94,7 @@ class FirstLaunchScreenTest {
                 onDismiss = {}
             )
         }
+        composeTestRule.waitForIdle()
 
         // When
         composeTestRule.onNodeWithTag("DiagnosticsSwitch")
@@ -113,6 +117,7 @@ class FirstLaunchScreenTest {
                 onDismiss = {}
             )
         }
+        composeTestRule.waitForIdle()
 
         // Then
         composeTestRule.onNodeWithTag("ModelLoadingProgress")
@@ -132,6 +137,7 @@ class FirstLaunchScreenTest {
                 onDismiss = {}
             )
         }
+        composeTestRule.waitForIdle()
 
         // Then
         composeTestRule.onNodeWithTag("ModelLoadingProgress")
@@ -172,6 +178,7 @@ class FirstLaunchScreenTest {
                 onDismiss = {}
             )
         }
+        composeTestRule.waitForIdle()
 
         // Then - verify instruction text content
         composeTestRule.onNodeWithText(
@@ -192,6 +199,7 @@ class FirstLaunchScreenTest {
                 onDismiss = {}
             )
         }
+        composeTestRule.waitForIdle()
 
         // Then
         composeTestRule.onNodeWithText("Preparing AI model...", substring = true)
