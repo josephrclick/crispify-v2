@@ -2,13 +2,13 @@
 
 ## Pre-Work: API Design Decisions (MUST DO FIRST)
 
-- [ ] 0. Define Streaming API and Align Components
-  - [ ] 0.1 Update LlamaNativeLibrary interface to support token streaming callback
-  - [ ] 0.2 Replace processText(String): String with processText(String, TokenCallback)
-  - [ ] 0.3 Define TokenCallback as Java SAM interface for JNI compatibility
-  - [ ] 0.4 Update ProcessTextViewModel to consume real token stream (not pseudo)
-  - [ ] 0.5 Fix TTFT calculation to measure first token arrival
-  - [ ] 0.6 Document threading model and cancellation mechanism
+- [x] 0. Define Streaming API and Align Components
+  - [x] 0.1 Update LlamaNativeLibrary interface to support token streaming callback
+  - [x] 0.2 Replace processText(String): String with processText(String, TokenCallback)
+  - [x] 0.3 Define TokenCallback as Java SAM interface for JNI compatibility
+  - [x] 0.4 Update ProcessTextViewModel to consume real token stream (not pseudo)
+  - [x] 0.5 Fix TTFT calculation to measure first token arrival
+  - [x] 0.6 Document threading model and cancellation mechanism
 
 ## Tasks
 
