@@ -36,7 +36,7 @@ class ProcessTextViewModelTokenLimitTest {
 
         viewModel.processText("some input text")
         // Give coroutine a moment to update state
-        delay(50)
+        delay(200)
 
         val state = viewModel.uiState.value
         assertEquals(

@@ -4,6 +4,29 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// Configure Java toolchain for consistent builds and test compatibility
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
+// Configure test tasks to use Java 17 for Robolectric compatibility
+tasks.withType<Test> {
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    })
+    
+    // Additional test configuration
+    maxHeapSize = "2g"
+    
+    // Show test output
+    testLogging {
+        events("passed", "skipped", "failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
 android {
     namespace = "com.clickapps.crispify"
     compileSdk = 36
