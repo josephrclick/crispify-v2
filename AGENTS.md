@@ -91,3 +91,19 @@ To ensure consistent, tool‑agnostic execution, always enter Agent OS via the c
   - Product scope and constraints: `_docs/PRD.md`.
   - Operational flow and entrypoints: `.claude/commands/*` (authoritative); they delegate to `.agent-os/instructions/*`.
   - If any guidance conflicts, follow the `.claude/commands/*` file and its referenced instruction.
+
+## Kotlin Symbol Search (Workaround — use this first)
+
+Tree-sitter MCP `search_code` may not return Kotlin classes/functions. Prefer the repo script that combines ripgrep defs with tree-sitter usages:
+
+```bash
+./.scripts/kotlin-symbols.sh <SymbolName> [directory] [pathPattern] [json]
+
+# Examples
+./.scripts/kotlin-symbols.sh MainActivity
+./.scripts/kotlin-symbols.sh LlamaEngine
+./.scripts/kotlin-symbols.sh MainContent
+./.scripts/kotlin-symbols.sh MainActivity /home/joe/dev/projects/crispify/v2/main app/src/main/java json
+```
+
+Use this script for Kotlin symbol lookups instead of `search_code` until the Kotlin index is fixed.

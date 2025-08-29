@@ -82,6 +82,24 @@ app/
 └── src/main/res/               # Resources (layouts, strings, drawables)
 ```
 
+## Kotlin Symbol Search Workaround (preferred)
+
+Until tree-sitter MCP `search_code` returns Kotlin classes and functions, prefer the local helper script for Kotlin symbol lookups. It prints Kotlin definitions (via ripgrep) and precise usages (via `tree-sitter-mcp find-usage`).
+
+- Preferred command:
+  - `./.scripts/kotlin-symbols.sh <SymbolName> [directory] [pathPattern] [json]`
+
+- Examples:
+  ```bash
+  ./.scripts/kotlin-symbols.sh MainActivity
+  ./.scripts/kotlin-symbols.sh LlamaEngine
+  ./.scripts/kotlin-symbols.sh MainContent
+  # Custom path and JSON output for usages:
+  ./.scripts/kotlin-symbols.sh MainActivity /home/joe/dev/projects/crispify/v2/main app/src/main/java json
+  ```
+
+Always use this script for Kotlin symbol searches instead of `search_code` until the Kotlin index is fixed.
+
 ## Implementation Status
 
 ### ✅ Completed Features (PR #2)
