@@ -2,6 +2,7 @@ package com.clickapps.crispify.ui.onboarding
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.clickapps.crispify.testing.TestApplication
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,7 +14,11 @@ import org.robolectric.annotation.Config
  * Tests UI components, interactions, and state changes
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33], instrumentedPackages = ["androidx.loader.content"])
+@Config(
+    sdk = [33], 
+    instrumentedPackages = ["androidx.loader.content"],
+    application = TestApplication::class
+)
 class FirstLaunchScreenTest {
 
     @get:Rule
