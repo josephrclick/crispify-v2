@@ -10,10 +10,11 @@
 - [X] First Launch screen - Onboarding and initial model load `S`
 - [X] Process-Text intent handler - Receive text from Android selection toolbar `M`
 - [X] Bottom sheet UI - Display simplified text in overlay `S` [COMPLETED 2025-08-29]
-- [X] Test infrastructure fixes - Resolve coroutine timing and mock configuration issues `M`
-- [ ] LLM integration - Implement llama.cpp JNI wrapper `L`
+- [X] Test infrastructure fixes - Resolve coroutine timing and mock configuration issues `M` [COMPLETED 2025-08-29]
+- [X] LLM integration - Implement llama.cpp JNI wrapper `L` [COMPLETED 2025-08-29]
+- [ ] Model inference - Complete llama.cpp inference implementation (currently stub) `M`
 - [ ] Text leveling engine - Implement 7th-grade simplification prompt `M`
-- [ ] Text streaming - Display partial results as generated `M`
+- [X] Text streaming - Display partial results as generated `M` [COMPLETED 2025-08-29]
 - [ ] Copy functionality - Allow copying simplified text `XS`
 - [ ] Model delivery - Configure Play Asset Delivery for GGUF model `M`
 - [ ] Privacy validation - Verify no network permissions in manifest `XS`
@@ -21,9 +22,10 @@
 
 ### Dependencies
 
-- Selection and configuration of appropriate GGUF model
+- Selection and configuration of appropriate GGUF model ✅ (Using Gemma-3-270M for dev)
 - Play Console setup for asset delivery
 - Testing devices with varying RAM configurations
+- Remove debug logging before release (privacy requirement)
 
 ## Phase 2: Polish & Performance
 

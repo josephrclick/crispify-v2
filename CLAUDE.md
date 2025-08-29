@@ -70,7 +70,9 @@ app/
 │   ├── engine/                 # LLM engine integration
 │   │   ├── LlamaEngine.kt      # Main engine with progress callbacks
 │   │   ├── LlamaNativeLibrary.kt # JNI wrapper interface
-│   │   └── MockModelInitializer.kt # Mock for development
+│   │   ├── LlamaNativeLibraryImpl.kt # Real JNI implementation
+│   │   ├── ModelAssetManager.kt # GGUF model extraction from assets
+│   │   └── MockLlamaNativeLibrary.kt # Mock for fallback
 │   ├── ui/
 │   │   ├── onboarding/         # First launch experience
 │   │   │   ├── FirstLaunchScreen.kt
@@ -79,6 +81,9 @@ app/
 │   │   ├── process/            # Text processing UI
 │   │   │   └── ProcessTextViewModel.kt
 │   │   └── theme/              # Material 3 theme configuration
+│   └── src/main/cpp/           # Native C++ code
+│       ├── crispify_jni.cpp    # JNI wrapper implementation
+│       └── llama_wrapper.cpp   # llama.cpp integration (stub)
 └── src/main/res/               # Resources (layouts, strings, drawables)
 ```
 
@@ -102,28 +107,32 @@ Always use this script for Kotlin symbol searches instead of `search_code` until
 
 ## Implementation Status
 
-### ✅ Completed Features (PR #2)
+### ✅ Completed Features
 
-1. **ProcessTextActivity**: Handles ACTION_PROCESS_TEXT intent with Material 3 bottom sheet
-2. **First Launch Screen**: Complete onboarding experience with model initialization and diagnostics opt-in
-3. **State Management**: ViewModel + DataStore Preferences for persistence
-4. **Diagnostics System**: Privacy-preserving local metrics collection (opt-in)
-5. **LLM Engine Stubs**: JNI wrapper interface ready for llama.cpp integration
+1. **ProcessTextActivity**: Handles ACTION_PROCESS_TEXT intent with Material 3 bottom sheet (PR #2)
+2. **First Launch Screen**: Complete onboarding experience with model initialization and diagnostics opt-in (PR #2)
+3. **State Management**: ViewModel + DataStore Preferences for persistence (PR #2)
+4. **Diagnostics System**: Privacy-preserving local metrics collection (opt-in) (PR #2)
+5. **JNI Integration**: Full JNI wrapper with Kotlin callback support and memory management (PR #9, #10)
+6. **Token Streaming**: Real-time token-by-token display from native to UI (PR #9, #10)
+7. **Model Asset Manager**: GGUF model extraction and validation from APK assets (PR #9)
+8. **llama.cpp Foundation**: Submodule integration and build infrastructure (PR #9)
 
 ### 🚧 Pending Implementation
 
-1. **Native LLM Integration**: Actual llama.cpp library integration via JNI
-2. **Model Asset Delivery**: Google Play Asset Delivery for GGUF model
-3. **Token Streaming**: Real-time token-by-token output display
-4. **Production Testing**: Device testing across Android 12+ devices
+1. **Model Inference**: Complete llama.cpp inference implementation (currently stub)
+2. **Model Asset Delivery**: Google Play Asset Delivery for production GGUF model
+3. **Production Testing**: Device testing across Android 12+ devices
+4. **Remove Debug Logging**: Strip all verbose logging before release for privacy
 
 ## Current Development State
 
-- **Active Branch**: `first-launch-screen` (PR #2)
+- **Active Branch**: `fix/jni-callback-debug-logging` (PR #10)
 - **Main Branch**: `main`
-- **Last Feature**: First Launch Screen implementation (completed 2025-08-28)
-- **Mock Mode**: Currently using `MockLlamaNativeLibrary` for development
-- **Next Priority**: Native llama.cpp integration and model asset delivery
+- **Last Feature**: LLM Integration - JNI wrapper and llama.cpp foundation (2025-08-29)
+- **Implementation Status**: Real JNI implementation active with stub llama.cpp wrapper
+- **Debug Logging**: ⚠️ Verbose logging enabled for development only - will be removed before release to honor privacy commitments
+- **Next Priority**: Complete llama.cpp model inference implementation
 
 ## Testing Strategy
 

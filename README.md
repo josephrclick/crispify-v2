@@ -48,11 +48,12 @@ This project is built with a modern, focused Android tech stack.
 This project was initialized from the standard "Empty Activity" template in Android Studio.
 
 1. **Clone the Repository:**  
-   git clone \<repository-url\>  
-   cd Crispify
+   git clone https://github.com/josephrclick/crispify-v2
+   cd crispify-v2
 
 2. Open in Android Studio:  
-   Open the project in the latest stable version of Android Studio. It should sync and build without any extra configuration.  
+   Open the project in the latest stable version of Android Studio. It should sync and build without any extra configuration. 
+    
 3. Run the App:  
    Run the app on a physical device or emulator with API 31+. The initial "Onboarding" screen will appear.
 
