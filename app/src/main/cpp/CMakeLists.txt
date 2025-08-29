@@ -49,7 +49,25 @@ set(LLAMA_METAL OFF CACHE BOOL "" FORCE)
 
 add_subdirectory(llama.cpp)
 
-# Link llama library
+# Build common library
+add_library(common STATIC
+    llama.cpp/common/common.cpp
+    llama.cpp/common/arg.cpp
+    llama.cpp/common/log.cpp
+    llama.cpp/common/console.cpp
+    llama.cpp/common/sampling.cpp
+    build-info.cpp
+)
+
+target_include_directories(common PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/ggml/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/vendor
+)
+
+# Link llama and common libraries
 target_link_libraries(crispify_llama
     llama
+    common
 )
