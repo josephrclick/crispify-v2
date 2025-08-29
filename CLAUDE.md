@@ -83,7 +83,8 @@ app/
 │   │   └── theme/              # Material 3 theme configuration
 │   └── src/main/cpp/           # Native C++ code
 │       ├── crispify_jni.cpp    # JNI wrapper implementation
-│       └── llama_wrapper.cpp   # llama.cpp integration (stub)
+│       ├── llama_wrapper.cpp   # llama.cpp integration with full inference
+│       └── build-info.cpp      # Build configuration for common library
 └── src/main/res/               # Resources (layouts, strings, drawables)
 ```
 
@@ -117,29 +118,35 @@ Always use this script for Kotlin symbol searches instead of `search_code` until
 6. **Token Streaming**: Real-time token-by-token display from native to UI (PR #9, #10)
 7. **Model Asset Manager**: GGUF model extraction and validation from APK assets (PR #9)
 8. **llama.cpp Foundation**: Submodule integration and build infrastructure (PR #9)
+9. **Model Inference**: Complete llama.cpp inference implementation with prompt templates (PR #11)
+10. **Memory Management**: Pre-flight memory checks and accurate tracking via native functions (PR #11)
+11. **Error Handling**: Comprehensive error enum with clean JNI propagation (PR #11)
+12. **Mobile Optimization**: Batch size 128, 4-thread configuration, efficient streaming (PR #11)
 
 ### 🚧 Pending Implementation
 
-1. **Model Inference**: Complete llama.cpp inference implementation (currently stub)
-2. **Model Asset Delivery**: Google Play Asset Delivery for production GGUF model
-3. **Production Testing**: Device testing across Android 12+ devices
-4. **Remove Debug Logging**: Strip all verbose logging before release for privacy
+1. **Model Asset Delivery**: Google Play Asset Delivery for production GGUF model
+2. **Production Testing**: Device testing across Android 12+ devices with actual GGUF model
+3. **Remove Debug Logging**: Strip all verbose logging before release for privacy
+4. **Test Coverage**: Resolve Android Log mocking issues for unit tests (see testing-issues.md)
 
 ## Current Development State
 
-- **Active Branch**: `fix/jni-callback-debug-logging` (PR #10)
 - **Main Branch**: `main`
-- **Last Feature**: LLM Integration - JNI wrapper and llama.cpp foundation (2025-08-29)
-- **Implementation Status**: Real JNI implementation active with stub llama.cpp wrapper
+- **Last Feature**: Complete llama.cpp model inference implementation (PR #11, merged 2025-08-29)
+- **Implementation Status**: Full inference engine with token streaming, error handling, and mobile optimizations
 - **Debug Logging**: ⚠️ Verbose logging enabled for development only - will be removed before release to honor privacy commitments
-- **Next Priority**: Complete llama.cpp model inference implementation
+- **Next Priority**: Model Asset Delivery and device testing with production GGUF model
 
 ## Testing Strategy
 
 - Unit tests: JUnit in `src/test/`
 - Instrumented tests: AndroidJUnit in `src/androidTest/`
 - Test runner: `androidx.test.runner.AndroidJUnitRunner`
-- **Known Issues**: Some unit tests have mocking issues with DataStore (functionality works)
+- **Known Issues**: 
+  - Android Log mocking prevents 7 LlamaEngine tests from running (see `.agent-os/specs/2025-08-29-model-inference-llama-cpp/testing-issues.md`)
+  - Some unit tests have mocking issues with DataStore (functionality works)
+  - Full test coverage blocked until Log mocking is resolved
 
 ## Important Implementation Constraints (PRD Section 2 - Non-Goals)
 
@@ -198,7 +205,12 @@ The `.agent-os/` directory contains agent-related documentation and operational 
 ├── recaps/                  # Implementation recaps
 │   └── 2025-08-28-first-launch-screen.md  # First launch feature recap
 ├── specs/                   # Feature specifications
-│   └── 2025-08-28-first-launch-screen/    # First launch spec and tasks
+│   ├── 2025-08-28-first-launch-screen/    # First launch spec and tasks
+│   └── 2025-08-29-model-inference-llama-cpp/  # Model inference implementation
+│       ├── spec.md          # Feature requirements
+│       ├── tasks.md         # Implementation tasks (90% complete)
+│       ├── testing-issues.md # Documented testing blockers
+│       └── sub-specs/       # Technical specifications
 ├── scripts/                 # Helper scripts for agents (to be created)
 └── agent-instructions.md    # Core agent behavioral guidelines (to be created)
 ```
