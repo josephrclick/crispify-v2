@@ -1,5 +1,6 @@
 package com.clickapps.crispify.engine
 
+import android.content.Context
 import com.clickapps.crispify.ui.onboarding.ModelInitializer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -29,9 +30,14 @@ class MockModelInitializer : ModelInitializer {
 
 /**
  * Factory function to create ModelInitializer
- * Returns mock for now, will return real implementation later
+ * Returns real LlamaEngine if native library is loaded, mock otherwise
  */
-fun createModelInitializer(): ModelInitializer {
-    // TODO: Replace with real JNI implementation when available
-    return MockModelInitializer()
+fun createModelInitializer(context: Context): ModelInitializer {
+    return if (LlamaNativeLibraryImpl.isNativeLibraryLoaded()) {
+        // Use real LlamaEngine with JNI implementation
+        LlamaEngine(context)
+    } else {
+        // Fall back to mock for development/testing
+        MockModelInitializer()
+    }
 }

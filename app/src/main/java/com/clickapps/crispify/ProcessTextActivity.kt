@@ -93,7 +93,7 @@ fun ProcessTextScreen(
     
     val viewModel: ProcessTextViewModel = viewModel(
         factory = ProcessTextViewModelFactory(
-            llamaEngine = LlamaEngine(),
+            llamaEngine = LlamaEngine(context),
             tokenCounter = tokenCounter,
             levelingTemplate = levelingTemplate,
             preferencesManager = preferencesManager,

@@ -3,6 +3,8 @@
 #include <thread>
 #include <chrono>
 #include <sstream>
+#include <vector>
+#include "llama.h"
 
 #define LOG_TAG "LlamaWrapper"
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
@@ -13,9 +15,9 @@ struct LlamaWrapper::Impl {
     bool model_loaded = false;
     size_t memory_usage = 0;
     
-    // TODO: Add actual llama.cpp context when integrated
-    // llama_context* ctx = nullptr;
-    // llama_model* model = nullptr;
+    // llama.cpp context and model
+    llama_context* ctx = nullptr;
+    llama_model* model = nullptr;
 };
 
 LlamaWrapper::LlamaWrapper() : pImpl(std::make_unique<Impl>()) {
@@ -32,23 +34,51 @@ LlamaWrapper::~LlamaWrapper() {
 bool LlamaWrapper::loadModel(const std::string& model_path, ProgressCallback progress_cb) {
     LOGD("Loading model from: %s", model_path.c_str());
     
-    // Stub implementation - simulate model loading
-    for (int i = 0; i <= 10; ++i) {
-        if (progress_cb) {
-            progress_cb(i / 10.0f);
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // Initialize llama backend
+    llama_backend_init();
+    
+    // Initialize model parameters
+    llama_model_params model_params = llama_model_default_params();
+    model_params.n_gpu_layers = 0; // CPU-only for now
+    
+    // Progress callback at 10%
+    if (progress_cb) progress_cb(0.1f);
+    
+    // Load the model
+    pImpl->model = llama_load_model_from_file(model_path.c_str(), model_params);
+    if (!pImpl->model) {
+        LOGE("Failed to load model from %s", model_path.c_str());
+        return false;
     }
     
-    // TODO: Actual llama.cpp model loading
-    // - Load GGUF file
-    // - Initialize context
-    // - Configure parameters
+    // Progress callback at 50%
+    if (progress_cb) progress_cb(0.5f);
+    
+    // Initialize context parameters
+    llama_context_params ctx_params = llama_context_default_params();
+    ctx_params.n_ctx = 2048;  // context size
+    ctx_params.n_batch = 512; // batch size for prompt processing
+    ctx_params.n_threads = 4; // CPU threads
+    
+    // Create context
+    pImpl->ctx = llama_new_context_with_model(pImpl->model, ctx_params);
+    if (!pImpl->ctx) {
+        LOGE("Failed to create context");
+        llama_free_model(pImpl->model);
+        pImpl->model = nullptr;
+        return false;
+    }
+    
+    // Progress callback at 90%
+    if (progress_cb) progress_cb(0.9f);
     
     pImpl->model_loaded = true;
-    pImpl->memory_usage = 100 * 1024 * 1024; // Mock 100MB
+    pImpl->memory_usage = 100 * 1024 * 1024; // Estimate 100MB for now
     
-    LOGD("Model loaded successfully");
+    // Progress callback at 100%
+    if (progress_cb) progress_cb(1.0f);
+    
+    LOGD("Model loaded successfully, memory: %zu bytes", pImpl->memory_usage);
     return true;
 }
 
@@ -64,6 +94,9 @@ void LlamaWrapper::processText(const std::string& input_text,
     }
     
     LOGD("Processing text of length: %zu", input_text.length());
+    
+    // For now, use a simplified stub implementation
+    // The full llama.cpp integration requires more complex setup
     
     // Stub implementation - tokenize and stream back
     std::istringstream stream(input_text);
@@ -97,25 +130,27 @@ void LlamaWrapper::processText(const std::string& input_text,
     }
     
     LOGD("Text processing complete - %d tokens", token_count);
-    
-    // TODO: Actual llama.cpp text generation
-    // - Apply prompt template
-    // - Tokenize input
-    // - Run inference loop
-    // - Stream tokens via callback
 }
 
 void LlamaWrapper::releaseModel() {
     LOGD("Releasing model resources");
     
-    // TODO: Clean up llama.cpp resources
-    // if (pImpl->ctx) {
-    //     llama_free(pImpl->ctx);
-    //     pImpl->ctx = nullptr;
-    // }
+    // Clean up llama.cpp resources
+    if (pImpl->ctx) {
+        llama_free(pImpl->ctx);
+        pImpl->ctx = nullptr;
+    }
+    
+    if (pImpl->model) {
+        llama_free_model(pImpl->model);
+        pImpl->model = nullptr;
+    }
     
     pImpl->model_loaded = false;
     pImpl->memory_usage = 0;
+    
+    // Clean up backend
+    llama_backend_free();
 }
 
 bool LlamaWrapper::isModelLoaded() const {

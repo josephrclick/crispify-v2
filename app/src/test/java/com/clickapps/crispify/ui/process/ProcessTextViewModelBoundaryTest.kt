@@ -47,7 +47,7 @@ class ProcessTextViewModelBoundaryTest {
         val diagnosticsManager = DiagnosticsManager(preferencesManager.dataStore)
         val nativeLib = native as CountingMockNativeLibrary
         val viewModel = ProcessTextViewModel(
-            llamaEngine = LlamaEngine(nativeLib),
+            llamaEngine = LlamaEngine(context, nativeLib),
             tokenCounter = FakeTokenCounterBoundary(tokens),
             levelingTemplate = "### Simplified Text\n\nOriginal Text:\n{{INPUT}}",
             preferencesManager = preferencesManager,
