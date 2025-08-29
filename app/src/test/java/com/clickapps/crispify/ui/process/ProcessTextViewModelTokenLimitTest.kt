@@ -45,7 +45,7 @@ class ProcessTextViewModelTokenLimitTest {
         val diagnosticsManager = DiagnosticsManager(testPrefs.dataStore)
 
         val viewModel = ProcessTextViewModel(
-            llamaEngine = LlamaEngine(LoadedNoOpNativeLibrary()),
+            llamaEngine = LlamaEngine(context),
             tokenCounter = FakeTokenCounter(TokenCounter.LIMIT_TOKENS + 1),
             levelingTemplate = "### Simplified Text\n\nOriginal Text:\n{{INPUT}}",
             preferencesManager = preferencesManager,

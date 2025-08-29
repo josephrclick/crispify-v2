@@ -1,5 +1,6 @@
 package com.clickapps.crispify.engine
 
+import android.content.Context
 import com.clickapps.crispify.ui.onboarding.ModelInitializer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -18,8 +19,11 @@ class ModelInitializationException(message: String, cause: Throwable? = null) :
  * Implements ModelInitializer interface for use with FirstLaunchViewModel
  */
 class LlamaEngine(
+    private val context: Context,
     private val nativeLibrary: LlamaNativeLibrary = createNativeLibrary()
 ) : ModelInitializer {
+    
+    private val modelAssetManager = ModelAssetManager(context)
     
     @Volatile
     private var initialized = false
@@ -37,13 +41,23 @@ class LlamaEngine(
             emit(0f)
             onProgress(0f)
             
-            // Load model from assets with progress callbacks
-            val modelPath = "models/crispify_model.gguf"
+            // Extract model from assets if needed (0% to 50% progress)
+            val modelPath = withContext(Dispatchers.IO) {
+                modelAssetManager.getModelPath { extractProgress ->
+                    val scaledProgress = extractProgress * 0.5f // Scale to 0-50%
+                    onProgress(scaledProgress)
+                }
+            }
             
+            // Emit 50% after extraction
+            emit(0.5f)
+            onProgress(0.5f)
+            
+            // Load model into memory (50% to 100% progress)
             val loadSuccess = withContext(Dispatchers.IO) {
-                nativeLibrary.loadModel(modelPath) { progress ->
-                    // Progress callback from native code
-                    onProgress(progress)
+                nativeLibrary.loadModel(modelPath) { loadProgress ->
+                    val scaledProgress = 0.5f + (loadProgress * 0.5f) // Scale to 50-100%
+                    onProgress(scaledProgress)
                 }
             }
             

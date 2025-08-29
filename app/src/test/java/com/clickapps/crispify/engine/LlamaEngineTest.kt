@@ -1,5 +1,6 @@
 package com.clickapps.crispify.engine
 
+import android.content.Context
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
@@ -24,13 +25,16 @@ class LlamaEngineTest {
     @Mock
     private lateinit var mockNativeLibrary: LlamaNativeLibrary
     
+    @Mock
+    private lateinit var mockContext: Context
+    
     private lateinit var llamaEngine: LlamaEngine
     
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
         `when`(mockNativeLibrary.isModelLoaded()).thenReturn(false)
-        llamaEngine = LlamaEngine(mockNativeLibrary)
+        llamaEngine = LlamaEngine(mockContext, mockNativeLibrary)
     }
     
     @Test

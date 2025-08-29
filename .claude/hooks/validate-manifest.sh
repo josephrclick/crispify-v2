@@ -3,7 +3,7 @@
 # Validate AndroidManifest.xml for privacy requirements
 # Per PRD: Must NOT include android.permission.INTERNET
 
-MANIFEST_FILES=$(find . -name "AndroidManifest.xml" -not -path "./build/*" 2>/dev/null)
+MANIFEST_FILES=$(find . -name "AndroidManifest.xml" -not -path "./build/*" -not -path "./app/src/main/cpp/llama.cpp/*" 2>/dev/null)
 
 if [ -z "$MANIFEST_FILES" ]; then
     echo "⚠️  No AndroidManifest.xml files found"

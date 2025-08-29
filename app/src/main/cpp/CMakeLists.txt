@@ -11,6 +11,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Add compile options for optimization
 add_compile_options(-O3 -Wall -Wextra)
 
+# Enable exceptions for llama.cpp
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
+
 # Find required libraries
 find_library(log-lib log)
 find_library(android-lib android)
@@ -25,6 +28,9 @@ add_library(crispify_llama SHARED
 # Include directories
 target_include_directories(crispify_llama PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/ggml/include
 )
 
 # Link libraries
@@ -33,6 +39,17 @@ target_link_libraries(crispify_llama
     ${android-lib}
 )
 
-# TODO: Add llama.cpp as subdirectory when integrated
-# add_subdirectory(llama.cpp)
-# target_link_libraries(crispify_llama llama)
+# Add llama.cpp library
+set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+set(LLAMA_NATIVE OFF CACHE BOOL "" FORCE)
+set(LLAMA_CUBLAS OFF CACHE BOOL "" FORCE)
+set(LLAMA_METAL OFF CACHE BOOL "" FORCE)
+
+add_subdirectory(llama.cpp)
+
+# Link llama library
+target_link_libraries(crispify_llama
+    llama
+)

@@ -19,7 +19,7 @@ class FirstLaunchViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(FirstLaunchViewModel::class.java)) {
             val dataStore = context.dataStore
-            val modelInitializer = createModelInitializer()
+            val modelInitializer = createModelInitializer(context)
             
             return FirstLaunchViewModel(
                 dataStore = dataStore,
