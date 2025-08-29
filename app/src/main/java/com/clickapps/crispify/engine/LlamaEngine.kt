@@ -49,7 +49,9 @@ class LlamaEngine(
             val modelPath = withContext(Dispatchers.IO) {
                 modelAssetManager.getModelPath { extractProgress ->
                     val scaledProgress = extractProgress * 0.5f // Scale to 0-50%
-                    Log.v(TAG, "Model extraction progress: ${extractProgress * 100}%")
+                    if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                        Log.v(TAG, "Model extraction progress: ${extractProgress * 100}%")
+                    }
                     onProgress(scaledProgress)
                 }
             }
@@ -64,7 +66,9 @@ class LlamaEngine(
             val loadSuccess = withContext(Dispatchers.IO) {
                 nativeLibrary.loadModel(modelPath) { loadProgress ->
                     val scaledProgress = 0.5f + (loadProgress * 0.5f) // Scale to 50-100%
-                    Log.v(TAG, "Model loading progress: ${loadProgress * 100}%")
+                    if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                        Log.v(TAG, "Model loading progress: ${loadProgress * 100}%")
+                    }
                     onProgress(scaledProgress)
                 }
             }
@@ -111,7 +115,9 @@ class LlamaEngine(
             try {
                 Log.d(TAG, "Calling native processText...")
                 nativeLibrary.processText(inputText) { token, isFinished ->
-                    Log.v(TAG, "Token received: '$token', finished: $isFinished")
+                    if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                        Log.v(TAG, "Token received: '$token', finished: $isFinished")
+                    }
                     onToken(token, isFinished)
                 }
                 Log.d(TAG, "Native processText completed")

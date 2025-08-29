@@ -18,9 +18,25 @@ static std::atomic<bool> g_cancel_flag{false};
 // Model wrapper instance
 static std::unique_ptr<LlamaWrapper> g_model_wrapper;
 
+// Cached JNI references for performance
+static jclass g_float_class = nullptr;
+static jmethodID g_float_constructor = nullptr;
+
 // JNI OnLoad - called when library is loaded
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* /*reserved*/) {
     g_vm = vm;
+    
+    // Cache Float class and constructor for performance
+    JNIEnv* env;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) == JNI_OK) {
+        jclass local_float_class = env->FindClass("java/lang/Float");
+        if (local_float_class) {
+            g_float_class = (jclass)env->NewGlobalRef(local_float_class);
+            g_float_constructor = env->GetMethodID(g_float_class, "<init>", "(F)V");
+            env->DeleteLocalRef(local_float_class);
+        }
+    }
+    
     LOGD("JNI_OnLoad: crispify_llama library loaded");
     return JNI_VERSION_1_6;
 }
@@ -56,18 +72,15 @@ Java_com_clickapps_crispify_engine_LlamaNativeLibraryImpl_loadModel(
         jclass callback_class = env->GetObjectClass(progress_callback);
         jmethodID invoke_method = env->GetMethodID(callback_class, "invoke", "(Ljava/lang/Object;)Ljava/lang/Object;");
         
-        if (invoke_method) {
-            // Box the float as Float object
-            jclass float_class = env->FindClass("java/lang/Float");
-            jmethodID float_constructor = env->GetMethodID(float_class, "<init>", "(F)V");
-            jobject float_obj = env->NewObject(float_class, float_constructor, progress);
+        if (invoke_method && g_float_class && g_float_constructor) {
+            // Box the float as Float object using cached references
+            jobject float_obj = env->NewObject(g_float_class, g_float_constructor, progress);
             
             // Call the Kotlin lambda
             jobject result = env->CallObjectMethod(progress_callback, invoke_method, float_obj);
             
             // Clean up
             env->DeleteLocalRef(float_obj);
-            env->DeleteLocalRef(float_class);
             if (result) env->DeleteLocalRef(result);
         }
         
