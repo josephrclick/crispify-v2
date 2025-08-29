@@ -71,24 +71,33 @@ class LlamaEngine(
     }.flowOn(Dispatchers.IO)
     
     /**
-     * Process text through the model
+     * Process text through the model with token streaming
      * @param inputText Text to simplify
-     * @return Simplified text
+     * @param onToken Callback for each generated token
      */
-    suspend fun processText(inputText: String): String {
+    suspend fun processText(inputText: String, onToken: (String, Boolean) -> Unit) {
         if (!initialized) {
             throw IllegalStateException("Model not initialized. Call initialize() first.")
         }
         
-        return withContext(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             try {
-                nativeLibrary.processText(inputText)
+                nativeLibrary.processText(inputText) { token, isFinished ->
+                    onToken(token, isFinished)
+                }
             } catch (e: Exception) {
                 throw ModelInitializationException(
                     "Failed to process text: ${e.message}", e
                 )
             }
         }
+    }
+    
+    /**
+     * Cancel any ongoing text processing
+     */
+    fun cancelProcessing() {
+        nativeLibrary.cancelProcessing()
     }
     
     /**
@@ -115,13 +124,10 @@ class LlamaEngine(
          * Returns mock for development, real JNI when available
          */
         private fun createNativeLibrary(): LlamaNativeLibrary {
-            return try {
-                // Try to load real JNI implementation
+            return if (LlamaNativeLibraryImpl.isNativeLibraryLoaded()) {
+                // Use real JNI implementation
                 LlamaNativeLibraryImpl()
-                // If no exception, check if library is actually loaded
-                // For now, always use mock since JNI not implemented
-                MockLlamaNativeLibrary()
-            } catch (e: UnsatisfiedLinkError) {
+            } else {
                 // Native library not available, use mock
                 MockLlamaNativeLibrary()
             }

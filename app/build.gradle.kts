@@ -39,6 +39,22 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Native build configuration
+        ndk {
+            // Only build for arm64-v8a as per PRD requirements
+            abiFilters.add("arm64-v8a")
+        }
+        
+        externalNativeBuild {
+            cmake {
+                // C++ flags for optimization and compatibility
+                cppFlags.add("-std=c++17")
+                cppFlags.add("-O3")
+                cppFlags.add("-fno-exceptions")
+                arguments.add("-DANDROID_STL=c++_shared")
+            }
+        }
     }
     
     testOptions {
@@ -69,6 +85,17 @@ android {
     buildFeatures {
         viewBinding = false
         compose = true
+    }
+    
+    // NDK version specification
+    ndkVersion = "25.2.9519653"
+    
+    // CMake configuration
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
     }
 }
 

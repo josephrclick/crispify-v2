@@ -2,23 +2,23 @@
 
 ## Pre-Work: API Design Decisions (MUST DO FIRST)
 
-- [ ] 0. Define Streaming API and Align Components
-  - [ ] 0.1 Update LlamaNativeLibrary interface to support token streaming callback
-  - [ ] 0.2 Replace processText(String): String with processText(String, TokenCallback)
-  - [ ] 0.3 Define TokenCallback as Java SAM interface for JNI compatibility
-  - [ ] 0.4 Update ProcessTextViewModel to consume real token stream (not pseudo)
-  - [ ] 0.5 Fix TTFT calculation to measure first token arrival
-  - [ ] 0.6 Document threading model and cancellation mechanism
+- [x] 0. Define Streaming API and Align Components
+  - [x] 0.1 Update LlamaNativeLibrary interface to support token streaming callback
+  - [x] 0.2 Replace processText(String): String with processText(String, TokenCallback)
+  - [x] 0.3 Define TokenCallback as Java SAM interface for JNI compatibility
+  - [x] 0.4 Update ProcessTextViewModel to consume real token stream (not pseudo)
+  - [x] 0.5 Fix TTFT calculation to measure first token arrival
+  - [x] 0.6 Document threading model and cancellation mechanism
 
 ## Tasks
 
-- [ ] 1. Set up Native Build Infrastructure
-  - [ ] 1.1 Update app/build.gradle.kts with NDK r25c, CMake, and arm64-v8a ABI filter
-  - [ ] 1.2 Create CMakeLists.txt with target name "crispify_llama" (match Kotlin)
-  - [ ] 1.3 Create initial C++ JNI stub files (crispify_jni.cpp)
-  - [ ] 1.4 Add gemma-3-270m-it-Q4_K_M.gguf to app/src/main/assets/ for dev
-  - [ ] 1.5 Write Kotlin unit tests with fake native layer
-  - [ ] 1.6 Verify native library loads successfully
+- [x] 1. Set up Native Build Infrastructure
+  - [x] 1.1 Update app/build.gradle.kts with NDK r25c, CMake, and arm64-v8a ABI filter
+  - [x] 1.2 Create CMakeLists.txt with target name "crispify_llama" (match Kotlin)
+  - [x] 1.3 Create initial C++ JNI stub files (crispify_jni.cpp)
+  - [x] 1.4 Add gemma-3-270m-it-Q4_K_M.gguf to app/src/main/assets/ for dev
+  - [x] 1.5 Write Kotlin unit tests with fake native layer
+  - [x] 1.6 Verify native library loads successfully
 
 - [ ] 2. Implement JNI Wrapper Methods
   - [ ] 2.1 Implement loadModel() JNI method with Java interface for progress

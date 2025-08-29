@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.runBlocking
 
 /**
  * ViewModel for ProcessTextActivity
@@ -35,16 +36,18 @@ class ProcessTextViewModel(
 
     /**
      * Process the selected text through the LLM engine.
-     * Implements minimal pseudo-streaming by appending tokens after engine completes.
+     * Implements real token streaming as tokens are generated.
      */
     fun processText(inputText: String) {
         currentJob?.cancel()
         currentJob = viewModelScope.launch {
-            _uiState.update { it.copy(isProcessing = true, error = null) }
+            _uiState.update { it.copy(isProcessing = true, error = null, processedText = "") }
             
             // Track processing start time for metrics
             val startTime = System.currentTimeMillis()
             var timeToFirstToken = 0L
+            var firstTokenReceived = false
+            var tokenCount = 0
             
             try {
                 // Check if model is initialized
@@ -68,45 +71,63 @@ class ProcessTextViewModel(
                     return@launch
                 }
                 
-                // Build prompt via helper and process the text
+                // Build prompt via helper and process the text with real streaming
                 val prompt = PromptTemplates.buildFromTemplate(levelingTemplate, inputText)
-                val simplifiedText = llamaEngine.processText(prompt)
-                // Time to first token approximates engine compute completion for pseudo-streaming
-                timeToFirstToken = System.currentTimeMillis() - startTime
+                val outputBuilder = StringBuilder()
                 
-                // Extract the result (remove the "### End" marker if present)
-                val cleanedText = simplifiedText
-                    .substringBefore("### End")
-                    .trim()
-                
-                // Pseudo-streaming: append tokens with small delays
-                val tokensOut = cleanedText.split(Regex("\\s+")).filter { it.isNotEmpty() }
-                val builder = StringBuilder()
-                for (token in tokensOut) {
-                    if (!isActive) return@launch
-                    if (builder.isNotEmpty()) builder.append(' ')
-                    builder.append(token)
-                    _uiState.update { it.copy(processedText = builder.toString(), isProcessing = true, error = null) }
-                    delay(STREAM_DELAY_MS)
+                llamaEngine.processText(prompt) { token, isFinished ->
+                    runBlocking {
+                        if (!firstTokenReceived) {
+                            // Capture time to first real token
+                            timeToFirstToken = System.currentTimeMillis() - startTime
+                            firstTokenReceived = true
+                        }
+                        
+                        if (!isFinished) {
+                            // Check for cancellation
+                            if (!isActive) {
+                                llamaEngine.cancelProcessing()
+                                return@runBlocking
+                            }
+                            
+                            // Append token and update UI
+                            outputBuilder.append(token)
+                            tokenCount++
+                            
+                            // Extract the result (remove the "### End" marker if present)
+                            val cleanedText = outputBuilder.toString()
+                                .substringBefore("### End")
+                            
+                            _uiState.update { 
+                                it.copy(processedText = cleanedText, isProcessing = true, error = null) 
+                            }
+                        } else {
+                            // Processing finished
+                            val finalText = outputBuilder.toString()
+                                .substringBefore("### End")
+                                .trim()
+                            
+                            _uiState.update { 
+                                it.copy(processedText = finalText, isProcessing = false, error = null) 
+                            }
+                            
+                            // Track diagnostics if enabled
+                            val totalTimeMs = System.currentTimeMillis() - startTime
+                            val memoryUsedMB = llamaEngine.getMemoryUsage() / (1024 * 1024)
+                            val tokensPerSecond = if (totalTimeMs > 0) {
+                                (tokenCount * 1000.0) / totalTimeMs
+                            } else 0.0
+                            
+                            diagnosticsManager?.recordProcessingSession(
+                                inputLength = inputText.length,
+                                outputLength = finalText.length,
+                                timeToFirstToken = timeToFirstToken,
+                                tokensPerSecond = tokensPerSecond,
+                                memoryUsedMB = memoryUsedMB
+                            )
+                        }
+                    }
                 }
-                // Finalize state after streaming completes
-                _uiState.update { it.copy(isProcessing = false, error = null) }
-                
-                // Track diagnostics if enabled
-                val engineProcessingTimeMs = timeToFirstToken
-                val memoryUsedMB = llamaEngine.getMemoryUsage() / (1024 * 1024)
-                val outTokenCount = tokenCounter.count(cleanedText).toDouble()
-                val tokensPerSecond = if (engineProcessingTimeMs > 0) {
-                    (outTokenCount * 1000.0) / engineProcessingTimeMs
-                } else 0.0
-                
-                diagnosticsManager?.recordProcessingSession(
-                    inputLength = inputText.length,
-                    outputLength = cleanedText.length,
-                    timeToFirstToken = timeToFirstToken,
-                    tokensPerSecond = tokensPerSecond,
-                    memoryUsedMB = memoryUsedMB
-                )
                 
             } catch (e: OutOfMemoryError) {
                 diagnosticsManager?.recordError(ErrorCode.OUT_OF_MEMORY)
@@ -127,10 +148,17 @@ class ProcessTextViewModel(
             }
         }
     }
+    
+    /**
+     * Cancel the current text processing operation
+     */
+    fun cancelProcessing() {
+        currentJob?.cancel()
+        llamaEngine.cancelProcessing()
+        _uiState.update { it.copy(isProcessing = false) }
+    }
 
 }
-
-private const val STREAM_DELAY_MS = 5L
 
 /**
  * UI state for ProcessTextActivity
