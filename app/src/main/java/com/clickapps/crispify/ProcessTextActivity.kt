@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import android.app.Activity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -56,7 +57,16 @@ class ProcessTextActivity : ComponentActivity() {
                 ProcessTextScreen(
                     selectedText = selectedText,
                     isReadOnly = isReadOnly,
-                    onDismiss = { finish() }
+                    onDismiss = { finish() },
+                    onReplace = { processed ->
+                        if (!isReadOnly && processed.isNotEmpty()) {
+                            setResult(
+                                Activity.RESULT_OK,
+                                Intent().putExtra(Intent.EXTRA_PROCESS_TEXT, processed)
+                            )
+                            finish()
+                        }
+                    }
                 )
             }
         }
@@ -72,7 +82,8 @@ class ProcessTextActivity : ComponentActivity() {
 fun ProcessTextScreen(
     selectedText: String,
     isReadOnly: Boolean,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onReplace: (String) -> Unit
 ) {
     val context = LocalContext.current
     val preferencesManager = PreferencesManager(context)
@@ -214,20 +225,30 @@ fun ProcessTextScreen(
                         // Action button
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        Button(
-                            onClick = {
-                                clipboardManager.setText(AnnotatedString(uiState.processedText))
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message = "Text copied to clipboard",
-                                        duration = SnackbarDuration.Short
-                                    )
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = uiState.processedText.isNotEmpty()
-                        ) {
-                            Text("Copy to Clipboard")
+                        if (isReadOnly) {
+                            Button(
+                                onClick = {
+                                    clipboardManager.setText(AnnotatedString(uiState.processedText))
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            message = "Text copied to clipboard",
+                                            duration = SnackbarDuration.Short
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = uiState.processedText.isNotEmpty()
+                            ) {
+                                Text("Copy to Clipboard")
+                            }
+                        } else {
+                            Button(
+                                onClick = { onReplace(uiState.processedText) },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = uiState.processedText.isNotEmpty()
+                            ) {
+                                Text("Replace")
+                            }
                         }
                     }
                 }
