@@ -59,7 +59,9 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    
+    // Tokenizer (JTokkit) for CL100K_BASE token counting
+    implementation("com.knuddels:jtokkit:1.1.0")
+
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
     

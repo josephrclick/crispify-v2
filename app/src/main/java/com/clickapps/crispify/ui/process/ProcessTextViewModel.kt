@@ -8,6 +8,7 @@ import com.clickapps.crispify.diagnostics.DiagnosticsManager
 import com.clickapps.crispify.diagnostics.ErrorCode
 import com.clickapps.crispify.diagnostics.MetricType
 import com.clickapps.crispify.engine.LlamaEngine
+import com.clickapps.crispify.engine.TokenCounter
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -17,6 +18,8 @@ import kotlinx.coroutines.launch
  */
 class ProcessTextViewModel(
     private val llamaEngine: LlamaEngine,
+    private val tokenCounter: TokenCounter,
+    private val levelingTemplate: String,
     private val preferencesManager: PreferencesManager,
     private val diagnosticsManager: DiagnosticsManager? = null
 ) : ViewModel() {
@@ -44,8 +47,9 @@ class ProcessTextViewModel(
                     }.collect()
                 }
                 
-                // Check text length limit (~1200 tokens, roughly 4800 characters)
-                if (inputText.length > 4800) {
+                // Check token length limit (~1200 tokens per PRD)
+                val tokens = tokenCounter.count(inputText)
+                if (tokens > TokenCounter.LIMIT_TOKENS) {
                     diagnosticsManager?.recordError(ErrorCode.TEXT_TOO_LONG)
                     _uiState.update {
                         it.copy(
@@ -58,7 +62,8 @@ class ProcessTextViewModel(
                 
                 // Process the text
                 timeToFirstToken = System.currentTimeMillis() - startTime
-                val simplifiedText = llamaEngine.processText(formatPrompt(inputText))
+                val prompt = levelingTemplate.replace("{{INPUT}}", inputText)
+                val simplifiedText = llamaEngine.processText(prompt)
                 
                 // Extract the result (remove the "### End" marker if present)
                 val cleanedText = simplifiedText
@@ -108,20 +113,6 @@ class ProcessTextViewModel(
         }
     }
     
-    /**
-     * Format the input text with the leveling prompt template
-     * Based on PRD Appendix A
-     */
-    private fun formatPrompt(inputText: String): String {
-        return """
-            ### Simplified Text
-            
-            Rewrite the following text in clear, plain language suitable for a 7th-grade reading level. Preserve all key facts, names, and numbers. Use shorter sentences and simple words. Do not add any new information or opinions.
-            
-            Original Text:
-            $inputText
-        """.trimIndent()
-    }
 }
 
 /**
@@ -138,6 +129,8 @@ data class ProcessTextUiState(
  */
 class ProcessTextViewModelFactory(
     private val llamaEngine: LlamaEngine,
+    private val tokenCounter: TokenCounter,
+    private val levelingTemplate: String,
     private val preferencesManager: PreferencesManager,
     private val diagnosticsManager: DiagnosticsManager? = null
 ) : ViewModelProvider.Factory {
@@ -145,7 +138,13 @@ class ProcessTextViewModelFactory(
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ProcessTextViewModel::class.java)) {
-            return ProcessTextViewModel(llamaEngine, preferencesManager, diagnosticsManager) as T
+            return ProcessTextViewModel(
+                llamaEngine,
+                tokenCounter,
+                levelingTemplate,
+                preferencesManager,
+                diagnosticsManager
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

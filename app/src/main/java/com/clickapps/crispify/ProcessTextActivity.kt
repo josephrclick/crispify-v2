@@ -23,6 +23,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.clickapps.crispify.data.PreferencesManager
 import com.clickapps.crispify.diagnostics.DiagnosticsManager
 import com.clickapps.crispify.engine.LlamaEngine
+import com.clickapps.crispify.engine.JTokkitTokenCounter
+import com.clickapps.crispify.engine.prompt.PromptTemplates
 import com.clickapps.crispify.ui.process.ProcessTextViewModel
 import com.clickapps.crispify.ui.process.ProcessTextViewModelFactory
 import com.clickapps.crispify.ui.theme.CrispifyTheme
@@ -75,10 +77,14 @@ fun ProcessTextScreen(
     val context = LocalContext.current
     val preferencesManager = PreferencesManager(context)
     val diagnosticsManager = DiagnosticsManager(preferencesManager.dataStore)
+    val tokenCounter = remember { JTokkitTokenCounter() }
+    val levelingTemplate = remember { PromptTemplates.loadLevelingTemplate(context.resources) }
     
     val viewModel: ProcessTextViewModel = viewModel(
         factory = ProcessTextViewModelFactory(
             llamaEngine = LlamaEngine(),
+            tokenCounter = tokenCounter,
+            levelingTemplate = levelingTemplate,
             preferencesManager = preferencesManager,
             diagnosticsManager = diagnosticsManager
         )
