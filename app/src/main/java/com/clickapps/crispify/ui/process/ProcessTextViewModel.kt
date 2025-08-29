@@ -9,8 +9,12 @@ import com.clickapps.crispify.diagnostics.ErrorCode
 import com.clickapps.crispify.diagnostics.MetricType
 import com.clickapps.crispify.engine.LlamaEngine
 import com.clickapps.crispify.engine.TokenCounter
+import com.clickapps.crispify.engine.prompt.PromptTemplates
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 /**
  * ViewModel for ProcessTextActivity
@@ -27,11 +31,15 @@ class ProcessTextViewModel(
     private val _uiState = MutableStateFlow(ProcessTextUiState())
     val uiState: StateFlow<ProcessTextUiState> = _uiState.asStateFlow()
     
+    private var currentJob: Job? = null
+
     /**
-     * Process the selected text through the LLM engine
+     * Process the selected text through the LLM engine.
+     * Implements minimal pseudo-streaming by appending tokens after engine completes.
      */
     fun processText(inputText: String) {
-        viewModelScope.launch {
+        currentJob?.cancel()
+        currentJob = viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true, error = null) }
             
             // Track processing start time for metrics
@@ -60,29 +68,36 @@ class ProcessTextViewModel(
                     return@launch
                 }
                 
-                // Process the text
-                timeToFirstToken = System.currentTimeMillis() - startTime
-                val prompt = levelingTemplate.replace("{{INPUT}}", inputText)
+                // Build prompt via helper and process the text
+                val prompt = PromptTemplates.buildFromTemplate(levelingTemplate, inputText)
                 val simplifiedText = llamaEngine.processText(prompt)
+                // Time to first token approximates engine compute completion for pseudo-streaming
+                timeToFirstToken = System.currentTimeMillis() - startTime
                 
                 // Extract the result (remove the "### End" marker if present)
                 val cleanedText = simplifiedText
                     .substringBefore("### End")
                     .trim()
                 
-                _uiState.update {
-                    it.copy(
-                        isProcessing = false,
-                        processedText = cleanedText,
-                        error = null
-                    )
+                // Pseudo-streaming: append tokens with small delays
+                val tokensOut = cleanedText.split(Regex("\\s+")).filter { it.isNotEmpty() }
+                val builder = StringBuilder()
+                for (token in tokensOut) {
+                    if (!isActive) return@launch
+                    if (builder.isNotEmpty()) builder.append(' ')
+                    builder.append(token)
+                    _uiState.update { it.copy(processedText = builder.toString(), isProcessing = true, error = null) }
+                    delay(STREAM_DELAY_MS)
                 }
+                // Finalize state after streaming completes
+                _uiState.update { it.copy(isProcessing = false, error = null) }
                 
                 // Track diagnostics if enabled
-                val processingTime = System.currentTimeMillis() - startTime
+                val engineProcessingTimeMs = timeToFirstToken
                 val memoryUsedMB = llamaEngine.getMemoryUsage() / (1024 * 1024)
-                val tokensPerSecond = if (processingTime > 0) {
-                    (cleanedText.split(" ").size * 1000.0) / processingTime
+                val outTokenCount = tokenCounter.count(cleanedText).toDouble()
+                val tokensPerSecond = if (engineProcessingTimeMs > 0) {
+                    (outTokenCount * 1000.0) / engineProcessingTimeMs
                 } else 0.0
                 
                 diagnosticsManager?.recordProcessingSession(
@@ -112,8 +127,10 @@ class ProcessTextViewModel(
             }
         }
     }
-    
+
 }
+
+private const val STREAM_DELAY_MS = 5L
 
 /**
  * UI state for ProcessTextActivity
