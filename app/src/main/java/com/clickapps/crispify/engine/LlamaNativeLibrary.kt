@@ -62,15 +62,22 @@ interface LlamaNativeLibrary {
 class LlamaNativeLibraryImpl : LlamaNativeLibrary {
     
     companion object {
+        @JvmStatic
+        private var nativeLibraryLoaded = false
+        
         init {
             try {
-                // Load the native library when available
-                // System.loadLibrary("crispify_llama")
-                // For now, we'll use mock implementation
+                // Load the native library
+                System.loadLibrary("crispify_llama")
+                nativeLibraryLoaded = true
             } catch (e: UnsatisfiedLinkError) {
                 // Native library not yet available
+                // This is expected during unit tests
+                nativeLibraryLoaded = false
             }
         }
+        
+        fun isNativeLibraryLoaded(): Boolean = nativeLibraryLoaded
     }
     
     // These will be actual JNI native methods when C++ implementation is ready

@@ -5,6 +5,7 @@ import com.clickapps.crispify.data.PreferencesManager
 import com.clickapps.crispify.diagnostics.DiagnosticsManager
 import com.clickapps.crispify.engine.LlamaEngine
 import com.clickapps.crispify.engine.LlamaNativeLibrary
+import com.clickapps.crispify.engine.TokenCallback
 import com.clickapps.crispify.engine.TokenCounter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -22,10 +23,15 @@ private class FakeTokenCounterBoundary(private val tokens: Int) : TokenCounter {
 private class CountingMockNativeLibrary : LlamaNativeLibrary {
     var processCalled = false
     override fun loadModel(modelPath: String, progressCallback: (Float) -> Unit): Boolean = true
-    override fun processText(inputText: String): String {
+    override fun processText(inputText: String, tokenCallback: TokenCallback) {
         processCalled = true
-        return inputText
+        // Simple token streaming simulation
+        inputText.split(" ").forEach { word ->
+            tokenCallback.onToken(word, false)
+        }
+        tokenCallback.onToken("", true)
     }
+    override fun cancelProcessing() {}
     override fun releaseModel() {}
     override fun isModelLoaded(): Boolean = true
     override fun getMemoryUsage(): Long = 0

@@ -8,6 +8,8 @@ import org.junit.Test
 import org.mockito.Mock
 import org.mockito.Mockito.*
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.doAnswer
 import org.mockito.MockitoAnnotations
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -82,22 +84,36 @@ class LlamaEngineTest {
     }
     
     @Test
-    fun `processText returns simplified text`() = runTest {
+    fun `processText streams tokens when model is initialized`() = runTest {
         // Given - Initialize model first
         `when`(mockNativeLibrary.loadModel(any(), any())).thenReturn(true)
         `when`(mockNativeLibrary.isModelLoaded()).thenReturn(true)
         llamaEngine.initialize {}.toList()
         
         val inputText = "Complex technical documentation"
-        val expectedOutput = "Simple easy to understand text"
-        `when`(mockNativeLibrary.processText(inputText)).thenReturn(expectedOutput)
+        val expectedTokens = listOf("Simple", " easy", " to", " understand", " text")
+        val receivedTokens = mutableListOf<String>()
+        
+        // Mock the processText to call the callback with tokens
+        doAnswer { invocation ->
+            val callback = invocation.getArgument<TokenCallback>(1)
+            expectedTokens.forEach { token ->
+                callback.onToken(token, false)
+            }
+            callback.onToken("", true)
+            null
+        }.`when`(mockNativeLibrary).processText(eq(inputText), any())
         
         // When
-        val result = llamaEngine.processText(inputText)
+        llamaEngine.processText(inputText) { token, isFinished ->
+            if (!isFinished) {
+                receivedTokens.add(token)
+            }
+        }
         
         // Then
-        assertEquals(expectedOutput, result)
-        verify(mockNativeLibrary).processText(inputText)
+        assertEquals(expectedTokens, receivedTokens)
+        verify(mockNativeLibrary).processText(eq(inputText), any())
     }
     
     @Test
@@ -108,13 +124,24 @@ class LlamaEngineTest {
         llamaEngine.initialize {}.toList()
         
         val inputText = ""
-        `when`(mockNativeLibrary.processText(inputText)).thenReturn("")
+        val receivedTokens = mutableListOf<String>()
+        
+        // Mock empty response
+        doAnswer { invocation ->
+            val callback = invocation.getArgument<TokenCallback>(1)
+            callback.onToken("", true)
+            null
+        }.`when`(mockNativeLibrary).processText(eq(inputText), any())
         
         // When
-        val result = llamaEngine.processText(inputText)
+        llamaEngine.processText(inputText) { token, isFinished ->
+            if (!isFinished) {
+                receivedTokens.add(token)
+            }
+        }
         
         // Then
-        assertEquals("", result)
+        assertTrue(receivedTokens.isEmpty())
     }
     
     @Test

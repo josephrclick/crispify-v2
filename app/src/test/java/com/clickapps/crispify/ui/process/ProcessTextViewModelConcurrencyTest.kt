@@ -5,6 +5,7 @@ import com.clickapps.crispify.data.PreferencesManager
 import com.clickapps.crispify.diagnostics.DiagnosticsManager
 import com.clickapps.crispify.engine.LlamaEngine
 import com.clickapps.crispify.engine.LlamaNativeLibrary
+import com.clickapps.crispify.engine.TokenCallback
 import com.clickapps.crispify.engine.TokenCounter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -16,10 +17,13 @@ import org.robolectric.annotation.Config
 
 private class FastNativeLibrary(private val tag: String) : LlamaNativeLibrary {
     override fun loadModel(modelPath: String, progressCallback: (Float) -> Unit): Boolean = true
-    override fun processText(inputText: String): String {
-        // Return a quick, distinctive result
-        return "$tag:$inputText"
+    override fun processText(inputText: String, tokenCallback: TokenCallback) {
+        // Return a quick, distinctive result via streaming
+        val result = "$tag:$inputText"
+        tokenCallback.onToken(result, false)
+        tokenCallback.onToken("", true)
     }
+    override fun cancelProcessing() {}
     override fun releaseModel() {}
     override fun isModelLoaded(): Boolean = true
     override fun getMemoryUsage(): Long = 0

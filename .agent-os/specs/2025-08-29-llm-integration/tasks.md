@@ -12,13 +12,13 @@
 
 ## Tasks
 
-- [ ] 1. Set up Native Build Infrastructure
-  - [ ] 1.1 Update app/build.gradle.kts with NDK r25c, CMake, and arm64-v8a ABI filter
-  - [ ] 1.2 Create CMakeLists.txt with target name "crispify_llama" (match Kotlin)
-  - [ ] 1.3 Create initial C++ JNI stub files (crispify_jni.cpp)
-  - [ ] 1.4 Add gemma-3-270m-it-Q4_K_M.gguf to app/src/main/assets/ for dev
-  - [ ] 1.5 Write Kotlin unit tests with fake native layer
-  - [ ] 1.6 Verify native library loads successfully
+- [x] 1. Set up Native Build Infrastructure
+  - [x] 1.1 Update app/build.gradle.kts with NDK r25c, CMake, and arm64-v8a ABI filter
+  - [x] 1.2 Create CMakeLists.txt with target name "crispify_llama" (match Kotlin)
+  - [x] 1.3 Create initial C++ JNI stub files (crispify_jni.cpp)
+  - [x] 1.4 Add gemma-3-270m-it-Q4_K_M.gguf to app/src/main/assets/ for dev
+  - [x] 1.5 Write Kotlin unit tests with fake native layer
+  - [x] 1.6 Verify native library loads successfully
 
 - [ ] 2. Implement JNI Wrapper Methods
   - [ ] 2.1 Implement loadModel() JNI method with Java interface for progress

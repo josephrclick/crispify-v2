@@ -124,13 +124,10 @@ class LlamaEngine(
          * Returns mock for development, real JNI when available
          */
         private fun createNativeLibrary(): LlamaNativeLibrary {
-            return try {
-                // Try to load real JNI implementation
+            return if (LlamaNativeLibraryImpl.isNativeLibraryLoaded()) {
+                // Use real JNI implementation
                 LlamaNativeLibraryImpl()
-                // If no exception, check if library is actually loaded
-                // For now, always use mock since JNI not implemented
-                MockLlamaNativeLibrary()
-            } catch (e: UnsatisfiedLinkError) {
+            } else {
                 // Native library not available, use mock
                 MockLlamaNativeLibrary()
             }
