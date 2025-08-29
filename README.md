@@ -1,3 +1,10 @@
+⚠️ **Work in Progress (Pre-Alpha)**
+
+This extension is under active development. It’s not production-ready and APIs/UI may change without notice.
+If you’re exploring the code, great! If you’re expecting a stable tool, please wait for v1.0.
+
+---
+
 # **Crispify \- An On-Device Text Simplifier for Android**
 
 Crispify is an Android utility that makes dense text easy to understand. It's a private, on-device tool that proves a small language model can be genuinely useful for simplifying text within a user's daily workflow.
