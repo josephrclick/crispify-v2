@@ -38,3 +38,4 @@ google-services.json
 .archive/
 .scripts/
 *.gguf
+app/src/main/cpp/llama.cpp/
