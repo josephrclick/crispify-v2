@@ -30,9 +30,10 @@ enum class InferenceError {
 // Create sampling parameters for text simplification
 common_params_sampling createSamplingParams() {
     common_params_sampling params;
-    params.temp = 0.35f;             // More deterministic for 270M IT
+    params.temp = 0.55f;             // Encourage paraphrasing
     params.top_p = 0.9f;             // Nucleus sampling
-    params.top_k = 20;               // Narrow top-k for stability
+    params.top_k = 40;               // Broaden candidate pool
+    params.typ_p = 0.95f;            // Typical sampling for rewording
     params.penalty_repeat = 1.10f;   // Reduce repetition/echo
     params.penalty_last_n = 256;     // Longer lookback for repetition
     // Enable DRY sampling to penalize repetitive sequences
@@ -255,7 +256,8 @@ void LlamaWrapper::processText(const std::string& input_text,
         "You are an expert editor who simplifies complex text. "
         "Follow instructions precisely. Your output must be clear, factual, and easy to read. "
         "Write only the simplified version of the text as 1-3 short sentences. "
-        "Do not repeat the instructions or the original text. "
+        "Paraphrase strongly: do not copy any phrase longer than 5 words from the original. "
+        "You may change sentence order for clarity. Do not repeat the instructions or the original text. "
         "Keep all key facts, names, and numbers. Use shorter sentences and simple words. "
         "Do not include headings, markdown, bullets, lists, or any prefixes like 'Answer:', 'Final Answer:', 'Here's why:', or 'To:'.";
 
@@ -283,6 +285,17 @@ void LlamaWrapper::processText(const std::string& input_text,
             "The city limited car use to reduce traffic during bad weather.";
         inputs.messages.push_back({"user", demo_user});
         inputs.messages.push_back({"assistant", demo_assistant});
+        // Health-news style mini-demo
+        const std::string demo_user2 =
+            "Rewrite the following text in clear, plain language suitable for a 7th-grade reading level. "
+            "Use shorter sentences and simple words. Do not add new information or opinions. "
+            "Output only the rewritten text, not quotes.\n\n"
+            "Original Text:\n"
+            "State health officials reported the first human case of West Nile virus in 2023, involving a 52-year-old resident of Sandoval County who had recently been hiking.";
+        const std::string demo_assistant2 =
+            "In 2023, the state confirmed its first human case of West Nile virus. The patient is a 52-year-old from Sandoval County who had recently been hiking.";
+        inputs.messages.push_back({"user", demo_user2});
+        inputs.messages.push_back({"assistant", demo_assistant2});
         // Actual user request
         inputs.messages.push_back({"user",   user_msg});
         auto chat_params = common_chat_templates_apply(pImpl->chat_templates.get(), inputs);
