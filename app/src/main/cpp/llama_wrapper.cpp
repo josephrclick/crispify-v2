@@ -32,8 +32,8 @@ common_params_sampling createSamplingParams() {
     params.temp = 0.7f;              // Temperature
     params.top_p = 0.9f;             // Nucleus sampling
     params.top_k = 40;               // Top-k filtering
-    params.penalty_repeat = 1.05f;   // Slight repetition penalty
-    params.penalty_last_n = 64;      // Lookback for repetition
+    params.penalty_repeat = 1.10f;   // Increase repetition penalty to reduce echoing
+    params.penalty_last_n = 256;     // Longer lookback for repetition
     return params;
 }
 
@@ -188,11 +188,22 @@ bool LlamaWrapper::loadModel(const std::string& model_path, ProgressCallback pro
     }
     
     pImpl->model_loaded = true;
-    
+
     // Get actual memory usage from llama.cpp
     uint64_t model_size = llama_model_size(pImpl->model);
     size_t context_size = llama_state_get_size(pImpl->ctx);
     pImpl->memory_usage = model_size + context_size;
+
+    // Diagnostics: log model description and chat template (if any)
+    char model_desc[256] = {0};
+    llama_model_desc(pImpl->model, model_desc, sizeof(model_desc));
+    const char* chat_tmpl = llama_model_chat_template(pImpl->model, nullptr);
+    LOGD("Model description: %s", model_desc);
+    if (chat_tmpl && chat_tmpl[0] != '\0') {
+        LOGD("Model chat template detected");
+    } else {
+        LOGD("Model chat template: none");
+    }
     
     // Progress callback at 100%
     if (progress_cb) progress_cb(1.0f);
@@ -311,7 +322,7 @@ void LlamaWrapper::processText(const std::string& input_text,
     // After prompt ingestion, current position equals number of prompt tokens
     int n_cur = n_prompt_tokens;
     int n_decode = 0;
-    const int n_max_tokens = 800;  // Maximum output tokens
+    const int n_max_tokens = 256;  // Maximum output tokens (tuned for leveling)
     
     std::string generated_text;
     
@@ -358,6 +369,12 @@ void LlamaWrapper::processText(const std::string& input_text,
             if (generated_text.find("### End") != std::string::npos) {
                 LOGD("Completion marker found");
                 // Do not re-send aggregated text; UI strips the marker already.
+                break;
+            }
+            // Stop if model starts echoing prompt sections
+            if (generated_text.find("### Simplified Text") != std::string::npos ||
+                generated_text.find("Original Text:") != std::string::npos) {
+                LOGD("Stop: detected prompt echo in generated output");
                 break;
             }
             
