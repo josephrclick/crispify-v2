@@ -52,6 +52,8 @@ class ProcessTextViewModel(
             try {
                 // Quick pre-flight token limit check (per PRD)
                 val tokens = tokenCounter.count(inputText)
+                // Debug: Kotlin preflight token count (different tokenizer than native)
+                android.util.Log.d("ProcessTextViewModel", "Preflight token count (Kotlin): $tokens")
                 if (tokens > TokenCounter.LIMIT_TOKENS) {
                     _uiState.update {
                         it.copy(

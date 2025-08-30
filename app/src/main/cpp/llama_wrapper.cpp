@@ -245,6 +245,8 @@ void LlamaWrapper::processText(const std::string& input_text,
     // Also ensure we do not exceed context window (safety check)
     {
         const int n_ctx = (int) llama_n_ctx(pImpl->ctx);
+        const int n_batch_dbg = (int) llama_n_batch(pImpl->ctx);
+        LOGD("Diagnostics: n_ctx=%d, n_batch=%d, total_prompt_tokens=%d", n_ctx, n_batch_dbg, total_tokens);
         if (total_tokens > n_ctx) {
             LOGE("Prompt exceeds context size (%d > %d)", total_tokens, n_ctx);
             if (token_cb) token_cb("", true);
@@ -286,9 +288,12 @@ void LlamaWrapper::processText(const std::string& input_text,
     llama_batch batch = llama_batch_init(n_batch_ctx, 0, 1);
     
     // Ingest the prompt in chunks of n_batch_ctx
+    const int n_chunks = (n_prompt_tokens + n_batch_ctx - 1) / n_batch_ctx;
+    LOGD("Prompt ingestion: n_prompt_tokens=%d, n_batch=%d, n_chunks=%d", n_prompt_tokens, n_batch_ctx, n_chunks);
     for (int i = 0; i < n_prompt_tokens; ) {
         common_batch_clear(batch);
         const int n_this = std::min(n_batch_ctx, n_prompt_tokens - i);
+        LOGD("Prompt chunk: start=%d, size=%d", i, n_this);
         for (int j = 0; j < n_this; ++j) {
             const bool is_last_overall = (i + j == n_prompt_tokens - 1);
             common_batch_add(batch, prompt_tokens[i + j], i + j, {0}, is_last_overall);
@@ -313,6 +318,7 @@ void LlamaWrapper::processText(const std::string& input_text,
     // Reset sampling context
     common_sampler_reset(pImpl->sampling_ctx);
     
+    const auto gen_start = std::chrono::steady_clock::now();
     while (n_decode < n_max_tokens && !cancel_flag) {
         // Sample next token using the sampling context
         llama_token new_token_id = common_sampler_sample(
@@ -328,7 +334,7 @@ void LlamaWrapper::processText(const std::string& input_text,
         // Check for end of generation
         const llama_vocab* vocab_eos = llama_model_get_vocab(pImpl->model);
         if (new_token_id == llama_vocab_eos(vocab_eos)) {
-            LOGD("EOS token reached");
+            LOGD("EOS token reached (id=%d)", (int) new_token_id);
             break;
         }
         
@@ -375,6 +381,9 @@ void LlamaWrapper::processText(const std::string& input_text,
         }
         
         n_decode++;
+        if (n_decode % 50 == 0) {
+            LOGD("Generated tokens so far: %d", n_decode);
+        }
     }
     
     // Clean up
@@ -385,7 +394,13 @@ void LlamaWrapper::processText(const std::string& input_text,
         token_cb("", true);
     }
     
-    LOGD("Text processing complete - generated %d tokens", n_decode);
+    const auto gen_end = std::chrono::steady_clock::now();
+    const auto gen_ms = std::chrono::duration_cast<std::chrono::milliseconds>(gen_end - gen_start).count();
+    double tps = gen_ms > 0 ? (n_decode * 1000.0) / (double) gen_ms : 0.0;
+    if (cancel_flag) {
+        LOGD("Text processing cancelled after %d tokens", n_decode);
+    }
+    LOGD("Text processing complete - generated %d tokens in %lld ms (%.2f tok/s)", n_decode, (long long) gen_ms, tps);
 }
 
 void LlamaWrapper::releaseModel() {
