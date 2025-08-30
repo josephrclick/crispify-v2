@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 #include "llama.h"
 #include "common.h"
@@ -270,39 +271,39 @@ void LlamaWrapper::processText(const std::string& input_text,
         "Original Text:\n" + input_text;
 
     std::string full_prompt;
-    std::vector<std::string> additional_stops;
     if (pImpl->chat_templates) {
-        common_chat_templates_inputs inputs;
-        // default: add_generation_prompt = true
-        inputs.use_jinja = true;
-        inputs.messages.push_back({"system", sys_msg});
-        // Few-shot demo (user -> assistant) to anchor style
-        const std::string demo_user =
-            "Rewrite the following text in clear, plain language suitable for a 7th-grade reading level. "
-            "Use shorter sentences and simple words. Do not add new information or opinions. "
-            "Output only the rewritten text, not quotes.\n\n"
-            "Original Text:\n"
-            "The municipality initiated vehicular restrictions to ameliorate congestion during inclement conditions.";
-        const std::string demo_assistant =
-            "The city limited car use to reduce traffic during bad weather.";
-        inputs.messages.push_back({"user", demo_user});
-        inputs.messages.push_back({"assistant", demo_assistant});
-        // Health-news style mini-demo
-        const std::string demo_user2 =
-            "Rewrite the following text in clear, plain language suitable for a 7th-grade reading level. "
-            "Use shorter sentences and simple words. Do not add new information or opinions. "
-            "Output only the rewritten text, not quotes.\n\n"
-            "Original Text:\n"
-            "State health officials reported the first human case of West Nile virus in 2023, involving a 52-year-old resident of Sandoval County who had recently been hiking.";
-        const std::string demo_assistant2 =
-            "In 2023, the state confirmed its first human case of West Nile virus. The patient is a 52-year-old from Sandoval County who had recently been hiking.";
-        inputs.messages.push_back({"user", demo_user2});
-        inputs.messages.push_back({"assistant", demo_assistant2});
-        // Actual user request
-        inputs.messages.push_back({"user",   user_msg});
-        auto chat_params = common_chat_templates_apply(pImpl->chat_templates.get(), inputs);
-        full_prompt = chat_params.prompt;
-        additional_stops = chat_params.additional_stops;
+        // Build base prompt (system + user) and decide whether to include a tiny few-shot
+        common_chat_templates_inputs base_inputs;
+        base_inputs.use_jinja = true;
+        base_inputs.messages.push_back({"system", sys_msg});
+        base_inputs.messages.push_back({"user",   user_msg});
+        auto chat_params_base = common_chat_templates_apply(pImpl->chat_templates.get(), base_inputs);
+        auto base_tokens = common_tokenize(pImpl->ctx, chat_params_base.prompt, /*add_special=*/false, /*parse_special=*/true);
+        const int base_n_prompt_tokens = (int) base_tokens.size();
+        const bool include_demo = base_n_prompt_tokens < 300;
+        if (!include_demo) {
+            full_prompt = chat_params_base.prompt;
+            LOGD("Few-shot: disabled (base prompt tokens=%d)", base_n_prompt_tokens);
+        } else {
+            common_chat_templates_inputs inputs;
+            inputs.use_jinja = true;
+            inputs.messages.push_back({"system", sys_msg});
+            // Single health-news style demo
+            const std::string demo_user =
+                "Rewrite the following text in clear, plain language suitable for a 7th-grade reading level. "
+                "Use shorter sentences and simple words. Do not add new information or opinions. "
+                "Output only the rewritten text, not quotes.\n\n"
+                "Original Text:\n"
+                "State health officials reported the first human case of West Nile virus in 2023, involving a 52-year-old resident of Sandoval County who had recently been hiking.";
+            const std::string demo_assistant =
+                "In 2023, the state confirmed its first human case of West Nile virus. The patient is a 52-year-old from Sandoval County who had recently been hiking.";
+            inputs.messages.push_back({"user", demo_user});
+            inputs.messages.push_back({"assistant", demo_assistant});
+            inputs.messages.push_back({"user",   user_msg});
+            auto chat_params = common_chat_templates_apply(pImpl->chat_templates.get(), inputs);
+            full_prompt = chat_params.prompt;
+            LOGD("Few-shot: enabled (base prompt tokens=%d)", base_n_prompt_tokens);
+        }
     } else {
         // Fallback: concatenate messages if no chat template is available
         full_prompt = sys_msg + "\n\nUser:\n" + user_msg + "\n\nAssistant:";
@@ -322,16 +323,7 @@ void LlamaWrapper::processText(const std::string& input_text,
     // Ensure we do not exceed context window
     const int n_ctx = (int) llama_n_ctx(pImpl->ctx);
     const int n_batch_dbg = (int) llama_n_batch(pImpl->ctx);
-    // Augment with conservative manual stops to avoid verbose patterns
-    additional_stops.push_back("\nAnswer:");
-    additional_stops.push_back("Final Answer:");
-    additional_stops.push_back("Here's why:");
-    additional_stops.push_back("The prompt asks for the following:");
-    additional_stops.push_back("**To:**");
-    additional_stops.push_back("It is not clear");
-    additional_stops.push_back("provided text contains errors");
     LOGD("Diagnostics: n_ctx=%d, n_batch=%d, total_prompt_tokens=%d", n_ctx, n_batch_dbg, n_prompt_tokens);
-    LOGD("Stops configured: %zu", additional_stops.size());
     if (n_prompt_tokens > n_ctx) {
         LOGE("Prompt exceeds context size (%d > %d)", n_prompt_tokens, n_ctx);
         if (token_cb) token_cb("", true);
@@ -367,7 +359,12 @@ void LlamaWrapper::processText(const std::string& input_text,
     // After prompt ingestion, current position equals number of prompt tokens
     int n_cur = n_prompt_tokens;
     int n_decode = 0;
-    const int n_max_tokens = 128;  // Tighter cap for leveling to avoid drift
+    // Adaptive cap based on input size
+    int input_token_est = pImpl->countTokens(input_text);
+    if (input_token_est < 0) input_token_est = 0;
+    int n_max_tokens = (int) std::lround(input_token_est * 0.6 + 24);
+    n_max_tokens = std::max(48, std::min(n_max_tokens, 256));
+    LOGD("Adaptive generation: input_tokens=%d, max_new_tokens=%d", input_token_est, n_max_tokens);
     
     std::string generated_text;
     
@@ -408,36 +405,7 @@ void LlamaWrapper::processText(const std::string& input_text,
         
         if (token_len > 0) {
             std::string token_text(token_str, token_len);
-            // Preview new text with this token before streaming
-            std::string preview = generated_text;
-            preview += token_text;
-
-            // Legacy completion marker (should no longer be present)
-            if (preview.find("### End") != std::string::npos) {
-                LOGD("Completion marker found");
-                break;
-            }
-            // Stop on chat/template-provided or manual stop strings
-            bool stop_hit = false;
-            for (const auto & s : additional_stops) {
-                if (!s.empty() && preview.find(s) != std::string::npos) {
-                    LOGD("Stop string hit: %s", s.c_str());
-                    stop_hit = true;
-                    break;
-                }
-            }
-            if (stop_hit) {
-                break;
-            }
-            // Stop if model starts echoing prompt sections
-            if (preview.find("### Simplified Text") != std::string::npos ||
-                preview.find("Original Text:") != std::string::npos) {
-                LOGD("Stop: detected prompt echo in generated output");
-                break;
-            }
-
-            // Accept and stream
-            generated_text = preview;
+            generated_text += token_text;
             if (token_cb) {
                 token_cb(token_text, false);
             }
