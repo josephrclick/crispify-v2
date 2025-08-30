@@ -35,6 +35,12 @@ common_params_sampling createSamplingParams() {
     params.top_k = 30;               // Top-k filtering
     params.penalty_repeat = 1.10f;   // Reduce repetition/echo
     params.penalty_last_n = 256;     // Longer lookback for repetition
+    // Enable DRY sampling to penalize repetitive sequences
+    params.dry_multiplier = 0.5f;    // conservative; higher = stronger penalty
+    // params.dry_base default 1.75
+    params.dry_allowed_length = 2;   // penalize repeats longer than 2 tokens
+    params.dry_penalty_last_n = -1;  // scan up to context size
+    // keep default dry_sequence_breakers ("\n", ":", "\"", "*")
     return params;
 }
 
@@ -248,13 +254,15 @@ void LlamaWrapper::processText(const std::string& input_text,
     const std::string sys_msg =
         "You are an expert editor who simplifies complex text. "
         "Follow instructions precisely. Your output must be clear, factual, and easy to read. "
-        "Write only the simplified version of the text. Do not repeat the instructions or the original text. "
+        "Write only the simplified version of the text as 1-3 short sentences. "
+        "Do not repeat the instructions or the original text. "
         "Keep all key facts, names, and numbers. Use shorter sentences and simple words. "
-        "Do not include headings or markdown in your output.";
+        "Do not include headings, markdown, bullets, lists, or any prefixes like 'Answer:', 'Final Answer:', 'Here's why:', or 'To:'.";
 
     std::string user_msg =
         "Rewrite the following text in clear, plain language suitable for a 7th-grade reading level. "
-        "Use shorter sentences and simple words. Do not add new information or opinions.\n\n"
+        "Use shorter sentences and simple words. Do not add new information or opinions. "
+        "Output only the rewritten text, not quotes.\n\n"
         "Original Text:\n" + input_text;
 
     std::string full_prompt;
@@ -291,6 +299,8 @@ void LlamaWrapper::processText(const std::string& input_text,
     additional_stops.push_back("\nAnswer:");
     additional_stops.push_back("Final Answer:");
     additional_stops.push_back("Here's why:");
+    additional_stops.push_back("The prompt asks for the following:");
+    additional_stops.push_back("**To:**");
     LOGD("Diagnostics: n_ctx=%d, n_batch=%d, total_prompt_tokens=%d", n_ctx, n_batch_dbg, n_prompt_tokens);
     LOGD("Stops configured: %zu", additional_stops.size());
     if (n_prompt_tokens > n_ctx) {
@@ -328,7 +338,7 @@ void LlamaWrapper::processText(const std::string& input_text,
     // After prompt ingestion, current position equals number of prompt tokens
     int n_cur = n_prompt_tokens;
     int n_decode = 0;
-    const int n_max_tokens = 256;  // Maximum output tokens (tuned for leveling)
+    const int n_max_tokens = 128;  // Tighter cap for leveling to avoid drift
     
     std::string generated_text;
     

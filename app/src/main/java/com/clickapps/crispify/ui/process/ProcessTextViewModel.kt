@@ -97,11 +97,12 @@ class ProcessTextViewModel(
                             tokenCount++
                             
                             // Extract the result and remove common echo/stop patterns
-                            val cleanedText = outputBuilder.toString()
-                                .substringBefore("### End")
-                                .substringBefore("\nAnswer:")
-                                .substringBefore("Final Answer:")
-                                .substringBefore("Here's why:")
+                                val cleanedText = outputBuilder.toString()
+                                    .substringBefore("### End")
+                                    .substringBefore("\nAnswer:")
+                                    .substringBefore("Final Answer:")
+                                    .substringBefore("Here's why:")
+                                    .substringBefore("**To:**")
                                 
                             _uiState.update { 
                                 it.copy(processedText = cleanedText, isProcessing = true, error = null) 
@@ -113,6 +114,7 @@ class ProcessTextViewModel(
                                 .substringBefore("\nAnswer:")
                                 .substringBefore("Final Answer:")
                                 .substringBefore("Here's why:")
+                                .substringBefore("**To:**")
                                 .trim()
                             
                             _uiState.update { 
