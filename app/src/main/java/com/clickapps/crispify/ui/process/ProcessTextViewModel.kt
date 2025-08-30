@@ -9,7 +9,6 @@ import com.clickapps.crispify.diagnostics.ErrorCode
 import com.clickapps.crispify.diagnostics.MetricType
 import com.clickapps.crispify.engine.LlamaEngine
 import com.clickapps.crispify.engine.TokenCounter
-import com.clickapps.crispify.engine.prompt.PromptTemplates
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -24,7 +23,7 @@ import kotlinx.coroutines.runBlocking
 class ProcessTextViewModel(
     private val llamaEngine: LlamaEngine,
     private val tokenCounter: TokenCounter,
-    private val levelingTemplate: String,
+    private val levelingTemplate: String,  // Kept for compatibility, but now handled in native
     private val preferencesManager: PreferencesManager,
     private val diagnosticsManager: DiagnosticsManager? = null
 ) : ViewModel() {
@@ -71,11 +70,10 @@ class ProcessTextViewModel(
                     }.collect()
                 }
                 
-                // Build prompt via helper and process the text with real streaming
-                val prompt = PromptTemplates.buildFromTemplate(levelingTemplate, inputText)
+                // Pass raw input text - native layer handles prompt engineering
                 val outputBuilder = StringBuilder()
                 
-                llamaEngine.processText(prompt) { token, isFinished ->
+                llamaEngine.processText(inputText) { token, isFinished ->
                     runBlocking {
                         if (!firstTokenReceived) {
                             // Capture time to first real token
@@ -94,18 +92,12 @@ class ProcessTextViewModel(
                             outputBuilder.append(token)
                             tokenCount++
                             
-                            // Extract the result (remove the "### End" marker if present)
-                            val cleanedText = outputBuilder.toString()
-                                .substringBefore("### End")
-                            
                             _uiState.update { 
-                                it.copy(processedText = cleanedText, isProcessing = true, error = null) 
+                                it.copy(processedText = outputBuilder.toString(), isProcessing = true, error = null) 
                             }
                         } else {
                             // Processing finished
-                            val finalText = outputBuilder.toString()
-                                .substringBefore("### End")
-                                .trim()
+                            val finalText = outputBuilder.toString().trim()
                             
                             _uiState.update { 
                                 it.copy(processedText = finalText, isProcessing = false, error = null) 
