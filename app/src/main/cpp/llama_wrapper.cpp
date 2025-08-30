@@ -227,30 +227,35 @@ void LlamaWrapper::processText(const std::string& input_text,
         return;
     }
     
-    // Step 1: Validate input token count (must be under 1000)
-    int input_tokens = pImpl->countTokens(input_text);
-    if (input_tokens > 1000) {
-        LOGE("Input text exceeds 1000 tokens: %d", input_tokens);
-        if (token_cb) {
-            token_cb("", true);  // Signal error
-        }
+    // Step 1: Treat input_text as the FINAL prompt (Kotlin already applied PRD template)
+    int total_tokens = pImpl->countTokens(input_text);
+    if (total_tokens < 0) {
+        LOGE("Failed to count tokens for prompt");
+        if (token_cb) token_cb("", true);
         return;
     }
     
-    // Step 2: Build complete prompt with template
-    std::string full_prompt = pImpl->buildPrompt(input_text);
-    
-    // Step 3: Check total prompt tokens (must be under 1200)
-    int total_tokens = pImpl->countTokens(full_prompt);
+    // Enforce spec total limit (~1200 tokens total including template)
     if (total_tokens > 1200) {
         LOGE("Total prompt exceeds 1200 tokens: %d", total_tokens);
-        if (token_cb) {
-            token_cb("", true);
-        }
+        if (token_cb) token_cb("", true);
         return;
     }
     
-    LOGD("Input tokens: %d, Total prompt tokens: %d", input_tokens, total_tokens);
+    // Also ensure we do not exceed context window (safety check)
+    {
+        const int n_ctx = (int) llama_n_ctx(pImpl->ctx);
+        if (total_tokens > n_ctx) {
+            LOGE("Prompt exceeds context size (%d > %d)", total_tokens, n_ctx);
+            if (token_cb) token_cb("", true);
+            return;
+        }
+    }
+    
+    // Use the full prompt as-is from Kotlin
+    std::string full_prompt = input_text;
+    
+    LOGD("Total prompt tokens: %d", total_tokens);
     
     // Step 4: Tokenize the prompt
     const llama_vocab* vocab = llama_model_get_vocab(pImpl->model);
@@ -276,7 +281,9 @@ void LlamaWrapper::processText(const std::string& input_text,
     prompt_tokens.resize(n_prompt_tokens);
     
     // Step 5: Initialize batch for processing
-    llama_batch batch = llama_batch_init(128, 0, 1);
+    // Capacity must be >= number of tokens we enqueue
+    const int batch_capacity = std::max(128, n_prompt_tokens + 1);
+    llama_batch batch = llama_batch_init(batch_capacity, 0, 1);
     
     // Add prompt tokens to batch
     for (int i = 0; i < n_prompt_tokens; i++) {
@@ -346,13 +353,7 @@ void LlamaWrapper::processText(const std::string& input_text,
             // Check for completion marker
             if (generated_text.find("### End") != std::string::npos) {
                 LOGD("Completion marker found");
-                // Remove the marker from output
-                size_t marker_pos = generated_text.find("### End");
-                generated_text = generated_text.substr(0, marker_pos);
-                if (token_cb && !generated_text.empty()) {
-                    token_cb(generated_text, false);
-                    generated_text.clear();
-                }
+                // Do not re-send aggregated text; UI strips the marker already.
                 break;
             }
             

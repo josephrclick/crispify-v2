@@ -11,8 +11,8 @@ interface TokenCounter {
     fun count(text: String): Int
 
     companion object {
-        // PRD limit: ~1200 tokens for user input only
-        const val LIMIT_TOKENS: Int = 1200
+        // PRD limit: 1000 tokens for user input (template ~200 separate)
+        const val LIMIT_TOKENS: Int = 1000
     }
 }
 
@@ -27,4 +27,3 @@ class JTokkitTokenCounter : TokenCounter {
         return encoding.countTokens(text)
     }
 }
-
