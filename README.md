@@ -40,21 +40,36 @@ This project is built with a modern, focused Android tech stack.
 * **UI:** 100% Jetpack Compose with Material 3  
 * **Platform:** Android 12 (SDK 31\) and above  
 * **Architecture:** arm64-v8a only  
-* **LLM Engine:** A native C++ library (like llama.cpp) accessed via a JNI bridge  
-* **Model Delivery:** The GGUF model is delivered via Google Play Asset Delivery
+* **LLM Engine:** llama.cpp via JNI bridge with adaptive prompt engineering
+* **Model:** Gemma-3 270M IT QAT Q5_K_M (quantized for mobile efficiency)
+* **Model Delivery:** Currently bundled in APK assets (Play Asset Delivery planned)
 
 ## **Getting Started**
 
-This project was initialized from the standard "Empty Activity" template in Android Studio.
+### Prerequisites: Model Installation
+
+**Important:** The app requires a language model to function. Download and place the model file before building:
+
+1. **Download the Model:**  
+   Download `gemma-3-270m-it-qat-Q5_K_M.gguf` from:  
+   https://huggingface.co/unsloth/gemma-3-270m-it-qat-GGUF
+   
+2. **Place the Model:**  
+   Copy the downloaded file to:  
+   `app/src/main/assets/models/gemma-3-270m-it-qat-Q5_K_M.gguf`
+   
+   Note: The `models` directory may need to be created if it doesn't exist.
+
+### Building the Project
 
 1. **Clone the Repository:**  
    git clone https://github.com/josephrclick/crispify-v2
    cd crispify-v2
 
-2. Open in Android Studio:  
+2. **Open in Android Studio:**  
    Open the project in the latest stable version of Android Studio. It should sync and build without any extra configuration. 
     
-3. Run the App:  
+3. **Run the App:**  
    Run the app on a physical device or emulator with API 31+. The initial "Onboarding" screen will appear.
 
 ## **Roadmap**
