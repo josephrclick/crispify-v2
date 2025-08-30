@@ -19,6 +19,7 @@ class ModelAssetManager(private val context: Context) {
         private const val MODEL_ASSET_PATH = "models/gemma-3-270m-it-qat-Q5_K_M.gguf"
         private const val MODEL_FILE_NAME = "crispify_model.gguf"
         private const val MODEL_DIR = "models"
+        private const val META_FILE_NAME = "crispify_model.meta"
         
         // Expected model size for validation (approximate)
         private const val MIN_MODEL_SIZE = 100_000_000L // 100MB minimum
@@ -38,17 +39,47 @@ class ModelAssetManager(private val context: Context) {
             }
             
             val modelFile = File(modelDir, MODEL_FILE_NAME)
-            
+            val metaFile = File(modelDir, META_FILE_NAME)
+
+            // Determine current asset size if available (used to detect model changes)
+            val assetSize = try {
+                context.assets.openFd(MODEL_ASSET_PATH).use { it.length }
+            } catch (e: IOException) { -1L }
+
             // Check if model already extracted and valid
             if (modelFile.exists() && isModelValid(modelFile)) {
-                Log.d(TAG, "Model already extracted: ${modelFile.absolutePath}")
-                progressCallback(1.0f)
-                return@withContext modelFile.absolutePath
+                // Verify meta matches current asset path and (if known) size
+                val needsReplace = try {
+                    val meta = if (metaFile.exists()) metaFile.readText() else ""
+                    val assetLine = meta.lineSequence().firstOrNull { it.startsWith("assetPath:") } ?: ""
+                    val sizeLine = meta.lineSequence().firstOrNull { it.startsWith("assetSize:") } ?: ""
+                    val metaAsset = assetLine.substringAfter(":", "").trim()
+                    val metaSize = sizeLine.substringAfter(":", "").trim().toLongOrNull()
+
+                    val assetMismatch = metaAsset.isNotEmpty() && metaAsset != MODEL_ASSET_PATH
+                    val sizeMismatch = assetSize > 0 && (metaSize ?: -1L) > 0 && metaSize != assetSize
+                    val fileSizeMismatch = assetSize > 0 && modelFile.length() != assetSize
+                    assetMismatch || sizeMismatch || fileSizeMismatch
+                } catch (e: Exception) {
+                    // If any error reading meta, conservatively replace
+                    true
+                }
+
+                if (!needsReplace) {
+                    Log.d(TAG, "Model already extracted and up-to-date: ${modelFile.absolutePath}")
+                    progressCallback(1.0f)
+                    return@withContext modelFile.absolutePath
+                } else {
+                    Log.d(TAG, "Model asset changed, re-extracting new model")
+                    // Remove old files
+                    runCatching { modelFile.delete() }
+                    runCatching { metaFile.delete() }
+                }
             }
             
             // Extract model from assets
             Log.d(TAG, "Extracting model from assets to: ${modelFile.absolutePath}")
-            extractModelFromAssets(modelFile, progressCallback)
+            extractModelFromAssets(modelFile, metaFile, progressCallback)
             
             // Validate extracted model
             if (!isModelValid(modelFile)) {
@@ -63,7 +94,7 @@ class ModelAssetManager(private val context: Context) {
     /**
      * Extract model from assets to private storage
      */
-    private fun extractModelFromAssets(targetFile: File, progressCallback: (Float) -> Unit) {
+    private fun extractModelFromAssets(targetFile: File, metaFile: File, progressCallback: (Float) -> Unit) {
         try {
             context.assets.open(MODEL_ASSET_PATH).use { inputStream ->
                 FileOutputStream(targetFile).use { outputStream ->
@@ -92,6 +123,14 @@ class ModelAssetManager(private val context: Context) {
                     outputStream.flush()
                     progressCallback(1.0f)
                 }
+            }
+
+            // Write meta file with asset details for future validation
+            runCatching {
+                val assetSizeReal = try {
+                    context.assets.openFd(MODEL_ASSET_PATH).use { it.length }
+                } catch (e: IOException) { -1L }
+                metaFile.writeText("assetPath: $MODEL_ASSET_PATH\nassetSize: $assetSizeReal\n")
             }
         } catch (e: IOException) {
             Log.e(TAG, "Failed to extract model from assets", e)
