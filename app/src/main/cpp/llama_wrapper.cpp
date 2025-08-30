@@ -30,13 +30,13 @@ enum class InferenceError {
 // Create sampling parameters for text simplification
 common_params_sampling createSamplingParams() {
     common_params_sampling params;
-    params.temp = 0.45f;             // Tighter for small IT models
+    params.temp = 0.35f;             // More deterministic for 270M IT
     params.top_p = 0.9f;             // Nucleus sampling
-    params.top_k = 30;               // Top-k filtering
+    params.top_k = 20;               // Narrow top-k for stability
     params.penalty_repeat = 1.10f;   // Reduce repetition/echo
     params.penalty_last_n = 256;     // Longer lookback for repetition
     // Enable DRY sampling to penalize repetitive sequences
-    params.dry_multiplier = 0.5f;    // conservative; higher = stronger penalty
+    params.dry_multiplier = 0.6f;    // slightly stronger
     // params.dry_base default 1.75
     params.dry_allowed_length = 2;   // penalize repeats longer than 2 tokens
     params.dry_penalty_last_n = -1;  // scan up to context size
@@ -272,6 +272,18 @@ void LlamaWrapper::processText(const std::string& input_text,
         // default: add_generation_prompt = true
         inputs.use_jinja = true;
         inputs.messages.push_back({"system", sys_msg});
+        // Few-shot demo (user -> assistant) to anchor style
+        const std::string demo_user =
+            "Rewrite the following text in clear, plain language suitable for a 7th-grade reading level. "
+            "Use shorter sentences and simple words. Do not add new information or opinions. "
+            "Output only the rewritten text, not quotes.\n\n"
+            "Original Text:\n"
+            "The municipality initiated vehicular restrictions to ameliorate congestion during inclement conditions.";
+        const std::string demo_assistant =
+            "The city limited car use to reduce traffic during bad weather.";
+        inputs.messages.push_back({"user", demo_user});
+        inputs.messages.push_back({"assistant", demo_assistant});
+        // Actual user request
         inputs.messages.push_back({"user",   user_msg});
         auto chat_params = common_chat_templates_apply(pImpl->chat_templates.get(), inputs);
         full_prompt = chat_params.prompt;
@@ -301,6 +313,8 @@ void LlamaWrapper::processText(const std::string& input_text,
     additional_stops.push_back("Here's why:");
     additional_stops.push_back("The prompt asks for the following:");
     additional_stops.push_back("**To:**");
+    additional_stops.push_back("It is not clear");
+    additional_stops.push_back("provided text contains errors");
     LOGD("Diagnostics: n_ctx=%d, n_batch=%d, total_prompt_tokens=%d", n_ctx, n_batch_dbg, n_prompt_tokens);
     LOGD("Stops configured: %zu", additional_stops.size());
     if (n_prompt_tokens > n_ctx) {
