@@ -7,6 +7,7 @@
 #include <string>
 #include <algorithm>
 #include <cmath>
+#include <cctype>
 #include <fstream>
 #include "llama.h"
 #include "common.h"
@@ -81,7 +82,8 @@ struct LlamaWrapper::Impl {
         int count = 0;
         bool in_word = false;
         for (char c : text) {
-            if (std::isspace(c)) {
+            // Cast to unsigned char to avoid undefined behavior with non-ASCII UTF-8 characters
+            if (std::isspace(static_cast<unsigned char>(c))) {
                 if (in_word) {
                     count++;
                     in_word = false;
