@@ -30,10 +30,10 @@ enum class InferenceError {
 // Create sampling parameters for text simplification
 common_params_sampling createSamplingParams() {
     common_params_sampling params;
-    params.temp = 0.7f;              // Temperature
+    params.temp = 0.45f;             // Tighter for small IT models
     params.top_p = 0.9f;             // Nucleus sampling
-    params.top_k = 40;               // Top-k filtering
-    params.penalty_repeat = 1.10f;   // Increase repetition penalty to reduce echoing
+    params.top_k = 30;               // Top-k filtering
+    params.penalty_repeat = 1.10f;   // Reduce repetition/echo
     params.penalty_last_n = 256;     // Longer lookback for repetition
     return params;
 }
@@ -258,6 +258,7 @@ void LlamaWrapper::processText(const std::string& input_text,
         "Original Text:\n" + input_text;
 
     std::string full_prompt;
+    std::vector<std::string> additional_stops;
     if (pImpl->chat_templates) {
         common_chat_templates_inputs inputs;
         // default: add_generation_prompt = true
@@ -266,6 +267,7 @@ void LlamaWrapper::processText(const std::string& input_text,
         inputs.messages.push_back({"user",   user_msg});
         auto chat_params = common_chat_templates_apply(pImpl->chat_templates.get(), inputs);
         full_prompt = chat_params.prompt;
+        additional_stops = chat_params.additional_stops;
     } else {
         // Fallback: concatenate messages if no chat template is available
         full_prompt = sys_msg + "\n\nUser:\n" + user_msg + "\n\nAssistant:";
@@ -285,7 +287,12 @@ void LlamaWrapper::processText(const std::string& input_text,
     // Ensure we do not exceed context window
     const int n_ctx = (int) llama_n_ctx(pImpl->ctx);
     const int n_batch_dbg = (int) llama_n_batch(pImpl->ctx);
+    // Augment with conservative manual stops to avoid verbose patterns
+    additional_stops.push_back("\nAnswer:");
+    additional_stops.push_back("Final Answer:");
+    additional_stops.push_back("Here's why:");
     LOGD("Diagnostics: n_ctx=%d, n_batch=%d, total_prompt_tokens=%d", n_ctx, n_batch_dbg, n_prompt_tokens);
+    LOGD("Stops configured: %zu", additional_stops.size());
     if (n_prompt_tokens > n_ctx) {
         LOGE("Prompt exceeds context size (%d > %d)", n_prompt_tokens, n_ctx);
         if (token_cb) token_cb("", true);
@@ -362,22 +369,36 @@ void LlamaWrapper::processText(const std::string& input_text,
         
         if (token_len > 0) {
             std::string token_text(token_str, token_len);
-            generated_text += token_text;
-            
-            // Check for completion marker
-            if (generated_text.find("### End") != std::string::npos) {
+            // Preview new text with this token before streaming
+            std::string preview = generated_text;
+            preview += token_text;
+
+            // Legacy completion marker (should no longer be present)
+            if (preview.find("### End") != std::string::npos) {
                 LOGD("Completion marker found");
-                // Do not re-send aggregated text; UI strips the marker already.
+                break;
+            }
+            // Stop on chat/template-provided or manual stop strings
+            bool stop_hit = false;
+            for (const auto & s : additional_stops) {
+                if (!s.empty() && preview.find(s) != std::string::npos) {
+                    LOGD("Stop string hit: %s", s.c_str());
+                    stop_hit = true;
+                    break;
+                }
+            }
+            if (stop_hit) {
                 break;
             }
             // Stop if model starts echoing prompt sections
-            if (generated_text.find("### Simplified Text") != std::string::npos ||
-                generated_text.find("Original Text:") != std::string::npos) {
+            if (preview.find("### Simplified Text") != std::string::npos ||
+                preview.find("Original Text:") != std::string::npos) {
                 LOGD("Stop: detected prompt echo in generated output");
                 break;
             }
-            
-            // Stream token to callback
+
+            // Accept and stream
+            generated_text = preview;
             if (token_cb) {
                 token_cb(token_text, false);
             }
