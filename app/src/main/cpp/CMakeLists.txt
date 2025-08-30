@@ -56,6 +56,11 @@ add_library(common STATIC
     llama.cpp/common/log.cpp
     llama.cpp/common/console.cpp
     llama.cpp/common/sampling.cpp
+    llama.cpp/common/chat.cpp
+    llama.cpp/common/chat-parser.cpp
+    llama.cpp/common/json-partial.cpp
+    llama.cpp/common/json-schema-to-grammar.cpp
+    llama.cpp/common/regex-partial.cpp
     build-info.cpp
 )
 

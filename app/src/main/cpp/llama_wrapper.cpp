@@ -10,6 +10,7 @@
 #include "llama.h"
 #include "common.h"
 #include "sampling.h"
+#include "chat.h"
 
 #define LOG_TAG "LlamaWrapper"
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
@@ -48,6 +49,8 @@ struct LlamaWrapper::Impl {
     
     // Sampling context
     common_sampler* sampling_ctx = nullptr;
+    // Chat template (built-in, from model)
+    common_chat_templates_ptr chat_templates{nullptr};
     
     // Helper function to check available memory on Android
     size_t getAvailableMemory() {
@@ -197,10 +200,12 @@ bool LlamaWrapper::loadModel(const std::string& model_path, ProgressCallback pro
     // Diagnostics: log model description and chat template (if any)
     char model_desc[256] = {0};
     llama_model_desc(pImpl->model, model_desc, sizeof(model_desc));
-    const char* chat_tmpl = llama_model_chat_template(pImpl->model, nullptr);
     LOGD("Model description: %s", model_desc);
-    if (chat_tmpl && chat_tmpl[0] != '\0') {
-        LOGD("Model chat template detected");
+    // Initialize chat templates from model (if available)
+    pImpl->chat_templates = common_chat_templates_init(pImpl->model, /*override*/ "");
+    if (pImpl->chat_templates) {
+        const char* src = common_chat_templates_source(pImpl->chat_templates.get(), nullptr);
+        LOGD("Model chat template detected (source: %s)", src ? src : "unknown");
     } else {
         LOGD("Model chat template: none");
     }
@@ -238,62 +243,56 @@ void LlamaWrapper::processText(const std::string& input_text,
         return;
     }
     
-    // Step 1: Treat input_text as the FINAL prompt (Kotlin already applied PRD template)
-    int total_tokens = pImpl->countTokens(input_text);
-    if (total_tokens < 0) {
-        LOGE("Failed to count tokens for prompt");
-        if (token_cb) token_cb("", true);
-        return;
+    // Step 1: Format messages via the model's built-in chat template
+    // Build system and user messages for leveling task
+    const std::string sys_msg =
+        "You are an expert editor who simplifies complex text. "
+        "Follow instructions precisely. Your output must be clear, factual, and easy to read. "
+        "Write only the simplified version of the text. Do not repeat the instructions or the original text. "
+        "Keep all key facts, names, and numbers. Use shorter sentences and simple words. "
+        "Do not include headings or markdown in your output.";
+
+    std::string user_msg =
+        "Rewrite the following text in clear, plain language suitable for a 7th-grade reading level. "
+        "Use shorter sentences and simple words. Do not add new information or opinions.\n\n"
+        "Original Text:\n" + input_text;
+
+    std::string full_prompt;
+    if (pImpl->chat_templates) {
+        common_chat_templates_inputs inputs;
+        // default: add_generation_prompt = true
+        inputs.use_jinja = true;
+        inputs.messages.push_back({"system", sys_msg});
+        inputs.messages.push_back({"user",   user_msg});
+        auto chat_params = common_chat_templates_apply(pImpl->chat_templates.get(), inputs);
+        full_prompt = chat_params.prompt;
+    } else {
+        // Fallback: concatenate messages if no chat template is available
+        full_prompt = sys_msg + "\n\nUser:\n" + user_msg + "\n\nAssistant:";
     }
-    
+
+    // Step 2: Tokenize chat-formatted prompt with special token parsing
+    std::vector<llama_token> prompt_tokens = common_tokenize(pImpl->ctx, full_prompt, /*add_special=*/false, /*parse_special=*/true);
+    const int n_prompt_tokens = (int) prompt_tokens.size();
+
     // Enforce spec total limit (~1200 tokens total including template)
-    if (total_tokens > 1200) {
-        LOGE("Total prompt exceeds 1200 tokens: %d", total_tokens);
+    if (n_prompt_tokens > 1200) {
+        LOGE("Total prompt exceeds 1200 tokens: %d", n_prompt_tokens);
         if (token_cb) token_cb("", true);
         return;
     }
     
-    // Also ensure we do not exceed context window (safety check)
-    {
-        const int n_ctx = (int) llama_n_ctx(pImpl->ctx);
-        const int n_batch_dbg = (int) llama_n_batch(pImpl->ctx);
-        LOGD("Diagnostics: n_ctx=%d, n_batch=%d, total_prompt_tokens=%d", n_ctx, n_batch_dbg, total_tokens);
-        if (total_tokens > n_ctx) {
-            LOGE("Prompt exceeds context size (%d > %d)", total_tokens, n_ctx);
-            if (token_cb) token_cb("", true);
-            return;
-        }
-    }
-    
-    // Use the full prompt as-is from Kotlin
-    std::string full_prompt = input_text;
-    
-    LOGD("Total prompt tokens: %d", total_tokens);
-    
-    // Step 4: Tokenize the prompt
-    const llama_vocab* vocab = llama_model_get_vocab(pImpl->model);
-    std::vector<llama_token> prompt_tokens(total_tokens + 1);
-    int n_prompt_tokens = llama_tokenize(
-        vocab,
-        full_prompt.c_str(),
-        full_prompt.length(),
-        prompt_tokens.data(),
-        prompt_tokens.size(),
-        true,   // add_bos
-        false   // special
-    );
-    
-    if (n_prompt_tokens < 0) {
-        LOGE("Failed to tokenize prompt");
-        if (token_cb) {
-            token_cb("", true);
-        }
+    // Ensure we do not exceed context window
+    const int n_ctx = (int) llama_n_ctx(pImpl->ctx);
+    const int n_batch_dbg = (int) llama_n_batch(pImpl->ctx);
+    LOGD("Diagnostics: n_ctx=%d, n_batch=%d, total_prompt_tokens=%d", n_ctx, n_batch_dbg, n_prompt_tokens);
+    if (n_prompt_tokens > n_ctx) {
+        LOGE("Prompt exceeds context size (%d > %d)", n_prompt_tokens, n_ctx);
+        if (token_cb) token_cb("", true);
         return;
     }
     
-    prompt_tokens.resize(n_prompt_tokens);
-    
-    // Step 5: Initialize batch for processing
+    // Step 4: Initialize batch for processing
     // Important: llama_decode expects batch.n_tokens <= llama_n_batch(ctx)
     const int n_batch_ctx = (int) llama_n_batch(pImpl->ctx);
     llama_batch batch = llama_batch_init(n_batch_ctx, 0, 1);

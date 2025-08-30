@@ -73,8 +73,8 @@ class ProcessTextViewModel(
                     }.collect()
                 }
                 
-                // Build prompt via helper and process the text with real streaming
-                val prompt = PromptTemplates.buildFromTemplate(levelingTemplate, inputText)
+                // Pass raw user input; native formats via model chat template
+                val prompt = inputText
                 val outputBuilder = StringBuilder()
                 
                 llamaEngine.processText(prompt) { token, isFinished ->
