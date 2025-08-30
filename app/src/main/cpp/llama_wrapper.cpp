@@ -30,14 +30,16 @@ enum class InferenceError {
 // Create sampling parameters for text simplification
 common_params_sampling createSamplingParams() {
     common_params_sampling params;
-    params.temp = 0.55f;             // Encourage paraphrasing
-    params.top_p = 0.9f;             // Nucleus sampling
-    params.top_k = 40;               // Broaden candidate pool
-    params.typ_p = 0.95f;            // Typical sampling for rewording
+    // Unsloth Gemma-3 270M IT recommended settings
+    params.temp = 1.0f;              // Temperature
+    params.top_k = 64;               // Top-k
+    params.top_p = 0.95f;            // Top-p
+    params.min_p = 0.0f;             // Min-p disabled
+    params.typ_p = 1.0f;             // Typical sampling disabled
     params.penalty_repeat = 1.10f;   // Reduce repetition/echo
     params.penalty_last_n = 256;     // Longer lookback for repetition
-    // Enable DRY sampling to penalize repetitive sequences
-    params.dry_multiplier = 0.6f;    // slightly stronger
+    // DRY sampling disabled to adhere to model defaults
+    params.dry_multiplier = 0.0f;
     // params.dry_base default 1.75
     params.dry_allowed_length = 2;   // penalize repeats longer than 2 tokens
     params.dry_penalty_last_n = -1;  // scan up to context size

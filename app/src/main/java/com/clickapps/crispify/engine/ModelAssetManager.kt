@@ -15,7 +15,8 @@ class ModelAssetManager(private val context: Context) {
     
     companion object {
         private const val TAG = "ModelAssetManager"
-        private const val MODEL_ASSET_PATH = "gemma-3-270m-it-Q4_K_M.gguf"
+        // Asset is placed under app/src/main/assets/models/
+        private const val MODEL_ASSET_PATH = "models/gemma-3-270m-it-qat-Q5_K_M.gguf"
         private const val MODEL_FILE_NAME = "crispify_model.gguf"
         private const val MODEL_DIR = "models"
         
