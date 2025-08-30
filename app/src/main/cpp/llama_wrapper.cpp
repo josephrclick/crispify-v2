@@ -281,32 +281,30 @@ void LlamaWrapper::processText(const std::string& input_text,
     prompt_tokens.resize(n_prompt_tokens);
     
     // Step 5: Initialize batch for processing
-    // Capacity must be >= number of tokens we enqueue
-    const int batch_capacity = std::max(128, n_prompt_tokens + 1);
-    llama_batch batch = llama_batch_init(batch_capacity, 0, 1);
+    // Important: llama_decode expects batch.n_tokens <= llama_n_batch(ctx)
+    const int n_batch_ctx = (int) llama_n_batch(pImpl->ctx);
+    llama_batch batch = llama_batch_init(n_batch_ctx, 0, 1);
     
-    // Add prompt tokens to batch
-    for (int i = 0; i < n_prompt_tokens; i++) {
-        common_batch_add(batch, prompt_tokens[i], i, {0}, false);
-    }
-    
-    // Mark last token for generation
-    batch.logits[batch.n_tokens - 1] = true;
-    
-    // Step 6: Process the prompt
-    // Note: KV cache is managed internally by llama_decode
-    
-    if (llama_decode(pImpl->ctx, batch) != 0) {
-        LOGE("Failed to process prompt");
-        llama_batch_free(batch);
-        if (token_cb) {
-            token_cb("", true);
+    // Ingest the prompt in chunks of n_batch_ctx
+    for (int i = 0; i < n_prompt_tokens; ) {
+        common_batch_clear(batch);
+        const int n_this = std::min(n_batch_ctx, n_prompt_tokens - i);
+        for (int j = 0; j < n_this; ++j) {
+            const bool is_last_overall = (i + j == n_prompt_tokens - 1);
+            common_batch_add(batch, prompt_tokens[i + j], i + j, {0}, is_last_overall);
         }
-        return;
+        if (llama_decode(pImpl->ctx, batch) != 0) {
+            LOGE("Failed to process prompt chunk at i=%d (n_this=%d)", i, n_this);
+            llama_batch_free(batch);
+            if (token_cb) token_cb("", true);
+            return;
+        }
+        i += n_this;
     }
     
     // Step 7: Generate tokens with streaming
-    int n_cur = batch.n_tokens;
+    // After prompt ingestion, current position equals number of prompt tokens
+    int n_cur = n_prompt_tokens;
     int n_decode = 0;
     const int n_max_tokens = 800;  // Maximum output tokens
     
